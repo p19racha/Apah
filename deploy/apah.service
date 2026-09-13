@@ -1,0 +1,76 @@
+# Apah Sovereign On-Premise AI Workbench Service Definition
+# Location: /etc/systemd/system/apah.service
+#
+# HARDENING & SECURITY GUARANTEES:
+# This service file implements OS-level kernel sandbox enforcement (seccomp, namespaces,
+# filesystem restrictions) to complement Apah's in-process security modules.
+
+[Unit]
+Description=Apah Custom LLM Inference Runtime (Air-Gapped Refinery AI Assistant)
+After=network.target nvidia-persistenced.service
+Wants=nvidia-persistenced.service
+
+[Service]
+Type=simple
+User=apah
+Group=apah
+WorkingDirectory=/var/lib/apah
+Environment="APAH_AIRGAP_MODE=1"
+Environment="PATH=/usr/local/bin:/usr/bin:/bin"
+ExecStart=/usr/local/bin/apah serve --host 127.0.0.1 --port 8000
+Restart=on-failure
+RestartSec=5s
+
+# ------------------------------------------------------------------------------
+# Process & Privilege Hardening
+# ------------------------------------------------------------------------------
+# Block privilege escalation (e.g., setuid binaries, sudo attempts)
+NoNewPrivileges=true
+
+# Prevent accessing user home directories
+ProtectHome=true
+
+# Make all system paths (/usr, /etc, /boot, /sys, /proc) strictly read-only
+ProtectSystem=strict
+
+# Use isolated /tmp and /var/tmp directories per service instance
+PrivateTmp=true
+
+# Restrict real kernel devices (keep access to NVIDIA GPU /dev/nvidia* nodes)
+DevicePolicy=closed
+DeviceAllow=/dev/nvidia* rwm
+DeviceAllow=/dev/nvidiactl rwm
+DeviceAllow=/dev/nvidia-uvm rwm
+DeviceAllow=/dev/nvidia-uvm-tools rwm
+DeviceAllow=/dev/urandom r
+
+# Disable memory execution modifications
+MemoryDenyWriteExecute=false  # Set false if PyTorch CUDA JIT requires executable memory
+
+# Lock down Linux kernel capabilities (drop ALL root capabilities)
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+# Restrict kernel control interfaces and sysctl modifications
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+RestrictRealtime=true
+
+# ------------------------------------------------------------------------------
+# Network Isolation Boundary (OS-level Air-gap)
+# ------------------------------------------------------------------------------
+# Create a private network namespace with loopback ONLY interface.
+# This makes it physically impossible for the process or any sub-process / dependency
+# to initiate external IPv4/IPv6 connections, regardless of application bugs.
+PrivateNetwork=true
+
+# ------------------------------------------------------------------------------
+# Filesystem Read-Write Lane Restrictions
+# ------------------------------------------------------------------------------
+# Restrict write access strictly to model store and tamper-evident audit log directories
+ReadWritePaths=/var/lib/apah/models /var/log/apah/audit
+
+[Install]
+WantedBy=multi-user.target

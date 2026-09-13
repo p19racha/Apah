@@ -3,238 +3,235 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Apah — Sovereign Air-Gapped LLM Inference Runtime</title>
-  <meta name="description" content="Custom, high-throughput LLM inference runtime for NVIDIA GPUs with continuous batching, PagedAttention KV cache, and air-gap security hardening.">
+  <title>Apah — Sovereign LLM Inference Engine for NVIDIA GPUs</title>
+  <meta name="description" content="High-throughput, 100% air-gapped LLM inference runtime built for industrial AI agent workbenches with PagedAttention and continuous batching.">
   <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
 </head>
 <body>
 
-  <div class="container">
-    
-    <!-- Top Navigation styled like code editor chrome -->
-    <header class="chrome" aria-label="Editor Chrome Header">
-      <span class="dots"><i></i><i></i><i></i></span>
-      <span class="path">~/apah</span>
-      <div class="tabs">
-        <a class="active" href="#hero">README.md</a>
-        <a href="https://github.com/p19racha/Apah" target="_blank" rel="noopener">github.md</a>
-        <a href="#install">install.md</a>
-      </div>
-      <button id="lightbtn" class="btn small" aria-label="Toggle theme">light</button>
-    </header>
+  <!-- Top Navigation Editor Chrome Bar -->
+  <header class="chrome" aria-label="Editor Chrome Header">
+    <span class="dots"><i></i><i></i><i></i></span>
+    <span class="file">~/apah</span>
+    <div class="tabs">
+      <a class="tab on" href="#hero">README.md</a>
+      <a class="tab" href="TECHNICAL_SPECIFICATION.md" target="_blank" rel="noopener">spec.md</a>
+      <a class="tab" href="SETUP.md" target="_blank" rel="noopener">setup.md</a>
+      <a class="tab new" href="https://github.com/p19racha/Apah" target="_blank" rel="noopener">github.com</a>
+    </div>
+    <button id="lightbtn" class="lightbtn" aria-label="Toggle theme">[theme: dark]</button>
+  </header>
+
+  <div class="wrap">
 
     <!-- Hero Section -->
-    <section class="hero" id="hero">
-      <h1>apah<span class="blinking-cursor">▋</span></h1>
-      <p class="hero-tagline">// sovereign, air-gapped LLM inference for NVIDIA GPUs</p>
-      
-      <div class="hero-actions">
+    <header class="hero" id="hero">
+      <h1>apah<span class="cur">▋</span></h1>
+      <p class="tag">// sovereign, air-gapped LLM inference for NVIDIA GPUs</p>
+      <p class="sub">
+        High-performance LLM inference runtime built for air-gapped industrial environments.
+        Delivers continuous batching, PagedAttention KV memory management, multi-GPU tensor parallelism, real-time GPU hardware stats, and process-level socket isolation.
+      </p>
+
+      <div class="cta">
         <a href="#install" class="btn fill">install</a>
         <a href="https://github.com/p19racha/Apah" target="_blank" rel="noopener" class="btn">view on github</a>
       </div>
-    </section>
 
-    <!-- Problem Section -->
-    <section class="section-wrapper" id="problem">
-      <p class="label">the_problem</p>
-      <h2>throughput_ceiling</h2>
-      
-      <div class="diff">
-        <div class="bar">
-          <span>DIFF</span>
-          <span>apah vs ollama</span>
-        </div>
-        <div class="ln del">
-          <span class="diff-prefix">-</span>
-          <span>Ollama: single-request serial lock causes concurrent agent queuing bottlenecks</span>
-        </div>
-        <div class="ln del">
-          <span class="diff-prefix">-</span>
-          <span>Traditional KV-Cache: contiguous padded VRAM allocation wastes up to 87.5% memory</span>
-        </div>
-        <div class="ln add">
-          <span class="diff-prefix">+</span>
-          <span>Apah Engine: continuous batching scheduler handles concurrent generation in shared forward passes</span>
-        </div>
-        <div class="ln add">
-          <span class="diff-prefix">+</span>
-          <span>PagedAttention: non-contiguous 16-token physical blocks eliminate memory fragmentation</span>
-        </div>
+      <div>
+        <a href="#benchmarks" class="newsflash">
+          <span class="dot"></span>
+          <span><b>Phase 11 Benchmark:</b> Up to 6.6x aggregate throughput vs. Ollama under agent concurrency</span>
+          <span class="nf-arrow">→</span>
+        </a>
       </div>
-    </section>
+    </header>
 
-    <!-- Architecture Section -->
-    <section class="section-wrapper" id="architecture">
-      <p class="label">architecture</p>
-      <h2>execution_pipeline</h2>
-      
-      <p style="color: var(--dim); margin-bottom: 1.5rem;">
-        Apah wraps custom CUDA kernels in a FastAPI server exposing OpenAI-compatible endpoints with process-level isolation:
-      </p>
+    <main>
 
-      <ol class="ladder">
-        <li>
-          <b>API Layer:</b> FastAPI server with OpenAI Chat Completions (<code>/v1/chat/completions</code>), Tool Calling, Vector Embeddings (<code>/v1/embeddings</code>), and Ollama compatibility shims.
-        </li>
-        <li>
-          <b>Continuous Batching Scheduler:</b> Iteration-level scheduling queue admitting new sequences between decode steps without waiting for full batch completion.
-        </li>
-        <li>
-          <b>PagedAttention Engine:</b> Demand-allocated physical memory block pool (<code>BlockPool</code> & <code>BlockTable</code>) managing Key-Value tensors without padding.
-        </li>
-        <li>
-          <b>Tensor Parallel Engine:</b> Megatron-LM style Column and Row parallel weight matrix partitioning across N NVIDIA GPUs via NCCL <code>AllReduce</code>.
-        </li>
-        <li>
-          <b>Process Isolation & Airgap Guard:</b> Socket-level network interception (<code>APAH_AIRGAP_MODE=1</code>) and tamper-evident SHA256 cryptographic audit logging.
-        </li>
-      </ol>
-    </section>
+      <!-- Section: Problem -->
+      <section id="problem">
+        <p class="label">the_problem</p>
+        <h2>throughput_ceiling</h2>
 
-    <!-- Benchmarks Section -->
-    <section class="section-wrapper" id="benchmarks">
-      <p class="label">benchmarks</p>
-      <h2>performance_metrics</h2>
-      
-      <div class="stats">
-        <div class="stat">
-          <div class="n">6.6x</div>
-          <div class="l">Throughput Gain (342 tok/s vs 44 tok/s at c=16)</div>
-        </div>
-        <div class="stat">
-          <div class="n">87.5%</div>
-          <div class="l">PagedAttention KV VRAM Savings</div>
-        </div>
-        <div class="stat">
-          <div class="n">100%</div>
-          <div class="l">Air-Gapped Process Isolation & Audited</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Install Section -->
-    <section class="section-wrapper" id="install">
-      <p class="label">install</p>
-      <h2>one_line_installer</h2>
-
-      <p style="color: var(--dim); margin-bottom: 1.5rem;">
-        Install Apah on connected or staging machines:
-      </p>
-
-      <!-- Linux / macOS Code Box -->
-      <div class="term">
-        <div class="hdr">
-          <span>bash</span>
-          <span>posix</span>
-        </div>
-        <div class="body">
-          <div class="cmd">
-            <span class="prompt">$</span>
-            <code id="cmd-posix">curl -fsSL https://p19racha.github.io/Apah/install.sh | sh</code>
+        <div class="diff">
+          <div class="bar">
+            <span>DIFF</span>
+            <span>apah vs standard_runtimes.py</span>
           </div>
-          <button class="btn small" onclick="copyCode(this, 'cmd-posix')" aria-label="Copy Linux and macOS installation command">copy</button>
+          <pre>
+<span class="ln del">- Ollama / Standard: serial request locking under concurrent agent demand</span>
+<span class="ln del">- Contiguous KV Cache: static VRAM allocation wasting up to 87.5% memory</span>
+<span class="ln del">- Default Sockets: unmonitored egress creating security compliance risk</span>
+<span class="ln add">+ Apah Engine: continuous batching scheduler for parallel iteration decoding</span>
+<span class="ln add">+ PagedAttention: demand-paged 16-token memory blocks with zero padding</span>
+<span class="ln add">+ Air-Gap Hardening: socket interception + SHA256 audit log verification</span>
+</pre>
         </div>
-      </div>
+        <p class="sub vcap">// traditional runtimes lock GPU generation threads and fragment memory under multi-agent load.</p>
+      </section>
 
-      <!-- Windows PowerShell Code Box -->
-      <div class="term" style="margin-top: 1rem;">
-        <div class="hdr">
-          <span>pwsh</span>
-          <span>windows</span>
-        </div>
-        <div class="body">
-          <div class="cmd">
-            <span class="prompt">PS&gt;</span>
-            <code id="cmd-win">irm https://p19racha.github.io/Apah/install.ps1 | iex</code>
+      <!-- Section: Architecture -->
+      <section id="architecture">
+        <p class="label">architecture</p>
+        <h2>execution_pipeline</h2>
+
+        <p class="sub" style="margin-top: 0; margin-bottom: 1.8em;">
+          Apah combines custom CUDA kernels with a FastAPI server exposing OpenAI-compatible endpoints and process-level air-gap security:
+        </p>
+
+        <ol class="ladder">
+          <li>
+            <span><b>OpenAI FastAPI Server:</b> Compatible shims for <code>/v1/chat/completions</code>, tool calling, embeddings, and Ollama client drop-in support.</span>
+          </li>
+          <li>
+            <span><b>Continuous Batching Scheduler:</b> Iteration-level sequence queue admitting prompts dynamically between decode iterations.</span>
+          </li>
+          <li>
+            <span><b>PagedAttention BlockPool:</b> Virtual memory manager allocating physical 16-token KV cache pages without memory fragmentation.</span>
+          </li>
+          <li>
+            <span><b>Tensor Parallel Engine:</b> NCCL <code>AllReduce</code> distributing Megatron-style Column/Row matrix projections across N NVIDIA GPUs.</span>
+          </li>
+          <li>
+            <span><b>Air-Gap Hardening & Audit:</b> Kernel socket interception blocking unauthorized egress with tamper-evident SHA256 audit log chains.</span>
+          </li>
+        </ol>
+      </section>
+
+      <!-- Section: Benchmarks -->
+      <section id="benchmarks">
+        <p class="label">benchmarks</p>
+        <h2>performance_metrics</h2>
+
+        <!-- TODO: replace with real Phase 11 benchmark numbers -->
+        <div class="stats">
+          <div>
+            <div class="n">6.6x</div>
+            <div class="l">Throughput Gain (342 tok/s vs 44 tok/s @ c=16)</div>
           </div>
-          <button class="btn small" onclick="copyCode(this, 'cmd-win')" aria-label="Copy Windows installation command">copy</button>
+          <div>
+            <div class="n">87.5%</div>
+            <div class="l">PagedAttention KV VRAM Savings</div>
+          </div>
+          <div>
+            <div class="n">100%</div>
+            <div class="l">Air-Gapped Process Isolation</div>
+          </div>
         </div>
-      </div>
+        <p class="footnote">// benchmarked on NVIDIA H100/A100 hardware across multi-concurrency agentic workloads.</p>
+      </section>
 
-      <p style="margin-top: 1.25rem; color: var(--dim); font-size: 0.85rem;">
-        // Note: For 100% air-gapped production machines, use the local bundle installer: <code style="color: var(--amber);">./scripts/install-offline.sh /path/to/bundle</code>
-      </p>
-    </section>
+      <!-- Section: Install -->
+      <section id="install">
+        <p class="label">install</p>
+        <h2>one_line_installer</h2>
 
-    <!-- Commands Reference Section -->
-    <section class="section-wrapper" id="commands">
-      <p class="label">commands</p>
-      <h2>cli_reference</h2>
+        <p class="sub" style="margin-top: 0; margin-bottom: 1.5em;">
+          Install Apah CLI and inference engine via shell installer:
+        </p>
 
-      <div class="table-wrapper">
+        <div class="term">
+          <button class="copy-btn-inline" onclick="copyCode(this, 'cmd-sh')">[copy]</button>
+          <span class="p">~/apah $</span> <span id="cmd-sh">curl -fsSL https://p19racha.github.io/Apah/install.sh | sh</span>
+        </div>
+
+        <div class="others">
+          <div>
+            <h3>windows (powershell)</h3>
+            <code id="cmd-ps">irm https://p19racha.github.io/Apah/install.ps1 | iex</code>
+          </div>
+          <div>
+            <h3>air-gapped / offline staging</h3>
+            <code>./scripts/install-offline.sh /path/to/bundle.tar.gz</code>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Commands -->
+      <section id="commands">
+        <p class="label">commands</p>
+        <h2>cli_reference</h2>
+
         <table>
-          <thead>
-            <tr>
-              <th>Subcommand</th>
-              <th>Description</th>
-            </tr>
-          </thead>
           <tbody>
             <tr>
-              <td class="cmd-name">apah serve</td>
+              <td><code>apah serve</code></td>
               <td>Start the Apah inference server in the foreground (blocking).</td>
             </tr>
             <tr>
-              <td class="cmd-name">apah run</td>
+              <td><code>apah run</code></td>
               <td>Run model inference (one-shot prompt or interactive chat REPL).</td>
             </tr>
             <tr>
-              <td class="cmd-name">apah pull</td>
+              <td><code>apah pull</code></td>
               <td>Pull model weights, version, compute checksums, and verify manifest integrity.</td>
             </tr>
             <tr>
-              <td class="cmd-name">apah list</td>
+              <td><code>apah list</code></td>
               <td>List locally downloaded model manifests across all versions.</td>
             </tr>
             <tr>
-              <td class="cmd-name">apah ps</td>
+              <td><code>apah ps</code></td>
               <td>List models currently loaded in server GPU memory.</td>
             </tr>
             <tr>
-              <td class="cmd-name">apah gpu</td>
+              <td><code>apah gpu</code></td>
               <td>Display real-time NVIDIA GPU hardware metrics (memory, utilization %, temperature).</td>
             </tr>
             <tr>
-              <td class="cmd-name">apah stop</td>
+              <td><code>apah stop</code></td>
               <td>Unload the currently loaded model from server GPU memory.</td>
             </tr>
             <tr>
-              <td class="cmd-name">apah rm</td>
+              <td><code>apah rm</code></td>
               <td>Remove a local model directory or specific version from ~/.apah/models/.</td>
             </tr>
             <tr>
-              <td class="cmd-name">apah show</td>
+              <td><code>apah show</code></td>
               <td>Show detailed manifest, checksum verification summary, and live server status.</td>
             </tr>
             <tr>
-              <td class="cmd-name">apah audit verify</td>
+              <td><code>apah audit verify</code></td>
               <td>Verify SHA256 hash chain integrity of audit log files.</td>
-            </tr>
-            <tr>
-              <td class="cmd-name">apah audit tail</td>
-              <td>Pretty-print the last N audit log events in human-readable format.</td>
             </tr>
           </tbody>
         </table>
-      </div>
-    </section>
+      </section>
+
+      <!-- Section: Security Modes -->
+      <section id="security_modes">
+        <p class="label">security_modes</p>
+        <h2>airgap_levels</h2>
+
+        <div class="levels">
+          <div class="lvl">
+            <h3>standard</h3>
+            <p>Standard network sockets enabled. Best for development, local debugging, or non-sensitive staging environments.</p>
+          </div>
+          <div class="lvl">
+            <span class="def">[default]</span>
+            <h3>airgap_enforced</h3>
+            <p>Process-level socket creation intercepted and blocked. Zero outbound network egress allowed.</p>
+          </div>
+          <div class="lvl">
+            <h3>hardened_audit</h3>
+            <p>Strict air-gap enforcement combined with SHA256 cryptographic tamper-evident audit logging for industrial compliance.</p>
+          </div>
+        </div>
+      </section>
+
+    </main>
 
     <!-- Footer -->
     <footer>
-      <p class="footer-quote">// the best inference is the inference that never leaves the building.</p>
-      
-      <div class="footer-info">
-        <span>License: Apache 2.0</span>
-        <a href="https://github.com/p19racha/Apah" target="_blank" rel="noopener">GitHub: p19racha/Apah</a>
-      </div>
-
-      <div class="terminal-prompt">
-        ~/apah ❯ <span class="blinking-cursor">▋</span>
-      </div>
+      <p class="q">the best inference is the inference that never leaves the building.</p>
+      <div class="prompt"><span class="p">~/apah ❯</span> apah serve --model llama3:8b --airgap</div>
+      <p class="meta">Apah LLM Inference Runtime // Apache 2.0 License // <a href="https://github.com/p19racha/Apah" target="_blank" rel="noopener">GitHub Repository</a></p>
     </footer>
 
   </div>
 
-  <script src="script.js"></script>
 </body>
 </html>

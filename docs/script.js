@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (storedTheme) {
     document.documentElement.setAttribute('data-theme', storedTheme);
     if (lightBtn) {
-      lightBtn.textContent = storedTheme === 'light' ? '🌙 dark mode' : '☀ light mode';
+      lightBtn.textContent = storedTheme === 'light' ? '[theme: light]' : '[theme: dark]';
     }
   }
 
@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       document.documentElement.setAttribute('data-theme', newTheme);
       localStorage.setItem('apah-theme', newTheme);
-      lightBtn.textContent = newTheme === 'light' ? '🌙 dark mode' : '☀ light mode';
+      lightBtn.textContent = newTheme === 'light' ? '[theme: light]' : '[theme: dark]';
     });
   }
 });

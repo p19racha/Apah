@@ -41,7 +41,25 @@
 
 ## Quickstart & Installation
 
-### 1. Installation
+### 1. One-Line Automatic Install (Recommended)
+
+- **Linux & macOS**:
+  ```bash
+  curl -fsSL https://p19racha.github.io/Apah/install.sh | sh
+  ```
+
+- **Windows (PowerShell)**:
+  ```powershell
+  irm https://p19racha.github.io/Apah/install.ps1 | iex
+  ```
+
+- **Air-Gapped / Offline Local Bundle Installation**:
+  ```bash
+  # Download dependencies on connected machine: pip download apah -d ./apah-bundle
+  ./scripts/install-offline.sh ./apah-bundle
+  ```
+
+### 2. Manual Source Installation
 
 ```bash
 # Clone the repository

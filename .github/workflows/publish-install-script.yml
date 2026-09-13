@@ -1,0 +1,42 @@
+name: Sync Installer Scripts to GitHub Pages
+
+on:
+  release:
+    types: [published]
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/install.sh'
+      - 'scripts/install.ps1'
+  workflow_dispatch:
+
+jobs:
+  sync-scripts:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Copy Install Scripts to docs/
+        run: |
+          mkdir -p docs
+          cp scripts/install.sh docs/install.sh
+          cp scripts/install.ps1 docs/install.ps1
+          chmod +x docs/install.sh
+
+      - name: Commit and Push Changes if Diff Exists
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          if git diff --quiet docs/install.sh docs/install.ps1; then
+            echo "No changes detected between scripts/ and docs/. Skipping commit."
+          else
+            git add docs/install.sh docs/install.ps1
+            git commit -m "ci: sync installer scripts from scripts/ to docs/"
+            git push origin main
+          fi

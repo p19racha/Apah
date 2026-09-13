@@ -11,46 +11,52 @@
 
   <div class="container">
     
-    <!-- Top Navigation styled like a file path breadcrumb -->
-    <nav class="top-nav" aria-label="Main Navigation">
-      <div class="breadcrumb">~/apah README.md</div>
-      <div class="nav-links">
-        <a href="https://github.com/p19racha/Apah" target="_blank" rel="noopener">[github]</a>
-        <a href="#install">[install]</a>
-        <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle light and dark theme">[theme: light]</button>
+    <!-- Top Navigation styled like code editor chrome -->
+    <header class="chrome" aria-label="Editor Chrome Header">
+      <span class="dots"><i></i><i></i><i></i></span>
+      <span class="path">~/apah</span>
+      <div class="tabs">
+        <a class="active" href="#hero">README.md</a>
+        <a href="https://github.com/p19racha/Apah" target="_blank" rel="noopener">github.md</a>
+        <a href="#install">install.md</a>
       </div>
-    </nav>
+      <button id="lightbtn" class="btn small" aria-label="Toggle theme">light</button>
+    </header>
 
     <!-- Hero Section -->
-    <header class="hero">
+    <section class="hero" id="hero">
       <h1>apah<span class="blinking-cursor">▋</span></h1>
       <p class="hero-tagline">// sovereign, air-gapped LLM inference for NVIDIA GPUs</p>
       
       <div class="hero-actions">
-        <a href="#install" class="btn-primary">[install]</a>
-        <a href="https://github.com/p19racha/Apah" target="_blank" rel="noopener" class="btn-secondary">[view on github]</a>
+        <a href="#install" class="btn fill">install</a>
+        <a href="https://github.com/p19racha/Apah" target="_blank" rel="noopener" class="btn">view on github</a>
       </div>
-    </header>
+    </section>
 
     <!-- Problem Section -->
     <section class="section-wrapper" id="problem">
-      <div class="section-label">the_problem</div>
-      <h2 class="section-title">throughput_ceiling</h2>
+      <p class="label">the_problem</p>
+      <h2>throughput_ceiling</h2>
       
-      <div class="diff-box">
-        <div class="diff-line del">
+      <div class="diff">
+        <div class="bar">
+          <span>DIFF</span>
+          <span>apah vs ollama</span>
+        </div>
+        <div class="ln del">
           <span class="diff-prefix">-</span>
           <span>Ollama: single-request serial lock causes concurrent agent queuing bottlenecks</span>
         </div>
-        <div class="diff-line del">
+        <div class="ln del">
           <span class="diff-prefix">-</span>
           <span>Traditional KV-Cache: contiguous padded VRAM allocation wastes up to 87.5% memory</span>
         </div>
-        <div class="diff-line add">
+        <div class="ln add">
           <span class="diff-prefix">+</span>
           <span>Apah Engine: continuous batching scheduler handles concurrent generation in shared forward passes</span>
         </div>
-        <div class="diff-line add">
+        <div class="ln add">
           <span class="diff-prefix">+</span>
           <span>PagedAttention: non-contiguous 16-token physical blocks eliminate memory fragmentation</span>
         </div>
@@ -59,87 +65,104 @@
 
     <!-- Architecture Section -->
     <section class="section-wrapper" id="architecture">
-      <div class="section-label">architecture</div>
-      <h2 class="section-title">execution_pipeline</h2>
+      <p class="label">architecture</p>
+      <h2>execution_pipeline</h2>
       
-      <p style="color: var(--text-muted); margin-bottom: 1rem;">
+      <p style="color: var(--dim); margin-bottom: 1.5rem;">
         Apah wraps custom CUDA kernels in a FastAPI server exposing OpenAI-compatible endpoints with process-level isolation:
       </p>
 
-      <ul class="pipeline-list">
-        <li class="pipeline-step">
-          <strong>API Layer:</strong> FastAPI server with OpenAI Chat Completions (<code style="color:var(--text-main)">/v1/chat/completions</code>), Tool Calling, Vector Embeddings (<code style="color:var(--text-main)">/v1/embeddings</code>), and Ollama compatibility shims.
+      <ol class="ladder">
+        <li>
+          <b>API Layer:</b> FastAPI server with OpenAI Chat Completions (<code>/v1/chat/completions</code>), Tool Calling, Vector Embeddings (<code>/v1/embeddings</code>), and Ollama compatibility shims.
         </li>
-        <li class="pipeline-step">
-          <strong>Continuous Batching Scheduler:</strong> Iteration-level scheduling queue admitting new sequences between decode steps without waiting for full batch completion.
+        <li>
+          <b>Continuous Batching Scheduler:</b> Iteration-level scheduling queue admitting new sequences between decode steps without waiting for full batch completion.
         </li>
-        <li class="pipeline-step">
-          <strong>PagedAttention Engine:</strong> Demand-allocated physical memory block pool (<code style="color:var(--text-main)">BlockPool</code> & <code style="color:var(--text-main)">BlockTable</code>) managing Key-Value tensors without padding.
+        <li>
+          <b>PagedAttention Engine:</b> Demand-allocated physical memory block pool (<code>BlockPool</code> & <code>BlockTable</code>) managing Key-Value tensors without padding.
         </li>
-        <li class="pipeline-step">
-          <strong>Tensor Parallel Engine:</strong> Megatron-LM style Column and Row parallel weight matrix partitioning across $N$ NVIDIA GPUs via NCCL <code style="color:var(--text-main)">AllReduce</code>.
+        <li>
+          <b>Tensor Parallel Engine:</b> Megatron-LM style Column and Row parallel weight matrix partitioning across N NVIDIA GPUs via NCCL <code>AllReduce</code>.
         </li>
-        <li class="pipeline-step">
-          <strong>Process Isolation & Airgap Guard:</strong> Socket-level network interception (<code style="color:var(--text-main)">APAH_AIRGAP_MODE=1</code>) and tamper-evident SHA256 cryptographic audit logging.
+        <li>
+          <b>Process Isolation & Airgap Guard:</b> Socket-level network interception (<code>APAH_AIRGAP_MODE=1</code>) and tamper-evident SHA256 cryptographic audit logging.
         </li>
-      </ul>
+      </ol>
     </section>
 
     <!-- Benchmarks Section -->
-    <!-- TODO: replace with real Phase 11 benchmark numbers -->
     <section class="section-wrapper" id="benchmarks">
-      <div class="section-label">benchmarks</div>
-      <h2 class="section-title">performance_metrics</h2>
+      <p class="label">benchmarks</p>
+      <h2>performance_metrics</h2>
       
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-value">6.6x</div>
-          <div class="stat-label">Throughput Gain (342 tok/s vs 44 tok/s at c=16)</div>
+      <div class="stats">
+        <div class="stat">
+          <div class="n">6.6x</div>
+          <div class="l">Throughput Gain (342 tok/s vs 44 tok/s at c=16)</div>
         </div>
-        <div class="stat-card">
-          <div class="stat-value">87.5%</div>
-          <div class="stat-label">PagedAttention KV VRAM Footprint Savings</div>
+        <div class="stat">
+          <div class="n">87.5%</div>
+          <div class="l">PagedAttention KV VRAM Savings</div>
         </div>
-        <div class="stat-card">
-          <div class="stat-value">100%</div>
-          <div class="stat-label">Air-Gapped Process Isolation & Audit Logged</div>
+        <div class="stat">
+          <div class="n">100%</div>
+          <div class="l">Air-Gapped Process Isolation & Audited</div>
         </div>
       </div>
     </section>
 
     <!-- Install Section -->
     <section class="section-wrapper" id="install">
-      <div class="section-label">install</div>
-      <h2 class="section-title">one_line_installer</h2>
+      <p class="label">install</p>
+      <h2>one_line_installer</h2>
 
-      <p style="color: var(--text-muted); margin-bottom: 1rem;">
+      <p style="color: var(--dim); margin-bottom: 1.5rem;">
         Install Apah on connected or staging machines:
       </p>
 
       <!-- Linux / macOS Code Box -->
-      <div class="install-box">
-        <code class="install-cmd" id="cmd-posix">curl -fsSL https://p19racha.github.io/Apah/install.sh | sh</code>
-        <button class="copy-btn" onclick="copyCode(this, 'cmd-posix')" aria-label="Copy Linux and macOS installation command">[copy]</button>
+      <div class="term">
+        <div class="hdr">
+          <span>bash</span>
+          <span>posix</span>
+        </div>
+        <div class="body">
+          <div class="cmd">
+            <span class="prompt">$</span>
+            <code id="cmd-posix">curl -fsSL https://p19racha.github.io/Apah/install.sh | sh</code>
+          </div>
+          <button class="btn small" onclick="copyCode(this, 'cmd-posix')" aria-label="Copy Linux and macOS installation command">copy</button>
+        </div>
       </div>
 
       <!-- Windows PowerShell Code Box -->
-      <div class="install-box">
-        <code class="install-cmd" id="cmd-win">irm https://p19racha.github.io/Apah/install.ps1 | iex</code>
-        <button class="copy-btn" onclick="copyCode(this, 'cmd-win')" aria-label="Copy Windows installation command">[copy]</button>
+      <div class="term" style="margin-top: 1rem;">
+        <div class="hdr">
+          <span>pwsh</span>
+          <span>windows</span>
+        </div>
+        <div class="body">
+          <div class="cmd">
+            <span class="prompt">PS&gt;</span>
+            <code id="cmd-win">irm https://p19racha.github.io/Apah/install.ps1 | iex</code>
+          </div>
+          <button class="btn small" onclick="copyCode(this, 'cmd-win')" aria-label="Copy Windows installation command">copy</button>
+        </div>
       </div>
 
-      <p class="note-text">
-        // Note: For 100% air-gapped production machines, use the local bundle installer: <code style="color: var(--accent);">./scripts/install-offline.sh /path/to/bundle</code>
+      <p style="margin-top: 1.25rem; color: var(--dim); font-size: 0.85rem;">
+        // Note: For 100% air-gapped production machines, use the local bundle installer: <code style="color: var(--amber);">./scripts/install-offline.sh /path/to/bundle</code>
       </p>
     </section>
 
     <!-- Commands Reference Section -->
     <section class="section-wrapper" id="commands">
-      <div class="section-label">commands</div>
-      <h2 class="section-title">cli_reference</h2>
+      <p class="label">commands</p>
+      <h2>cli_reference</h2>
 
       <div class="table-wrapper">
-        <table class="commands-table">
+        <table>
           <thead>
             <tr>
               <th>Subcommand</th>
@@ -202,7 +225,7 @@
       
       <div class="footer-info">
         <span>License: Apache 2.0</span>
-        <a href="https://github.com/p19racha/Apah" target="_blank" rel="noopener">GitHub Repository: p19racha/Apah</a>
+        <a href="https://github.com/p19racha/Apah" target="_blank" rel="noopener">GitHub: p19racha/Apah</a>
       </div>
 
       <div class="terminal-prompt">

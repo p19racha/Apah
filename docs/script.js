@@ -1,48 +1,42 @@
-/* Apah Landing Page Interactions: Copy buttons & Theme Toggle (Zero Dependencies) */
+/* Apah Landing Page Interactions: Theme Toggle & Copy Buttons */
 
 document.addEventListener('DOMContentLoaded', () => {
-  // 1. Theme Toggle Setup
-  const themeToggleBtn = document.getElementById('theme-toggle');
+  const lightBtn = document.getElementById('lightbtn');
   const storedTheme = localStorage.getItem('apah-theme');
-  
+
   if (storedTheme) {
     document.documentElement.setAttribute('data-theme', storedTheme);
-    if (themeToggleBtn) {
-      themeToggleBtn.textContent = storedTheme === 'light' ? '[theme: dark]' : '[theme: light]';
+    if (lightBtn) {
+      lightBtn.textContent = storedTheme === 'light' ? '🌙 dark mode' : '☀ light mode';
     }
   }
 
-  if (themeToggleBtn) {
-    themeToggleBtn.addEventListener('click', () => {
+  if (lightBtn) {
+    lightBtn.addEventListener('click', () => {
       const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
       const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-      
+
       document.documentElement.setAttribute('data-theme', newTheme);
       localStorage.setItem('apah-theme', newTheme);
-      themeToggleBtn.textContent = newTheme === 'light' ? '[theme: dark]' : '[theme: light]';
+      lightBtn.textContent = newTheme === 'light' ? '🌙 dark mode' : '☀ light mode';
     });
   }
 });
 
-// 2. Clipboard Copy Helper
-function copyCode(buttonElement, targetId) {
-  const codeElement = document.getElementById(targetId);
-  if (!codeElement) return;
+function copyCode(btn, codeId) {
+  const codeEl = document.getElementById(codeId);
+  if (!codeEl) return;
 
-  const textToCopy = codeElement.innerText.trim();
-  
-  navigator.clipboard.writeText(textToCopy).then(() => {
-    const originalText = buttonElement.innerText;
-    buttonElement.innerText = '[copied!]';
-    buttonElement.style.borderColor = 'var(--accent)';
-    buttonElement.style.color = 'var(--accent)';
-    
+  const text = codeEl.innerText.trim();
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.innerText;
+    btn.innerText = '[copied!]';
+    btn.style.color = 'var(--amber)';
+    btn.style.borderColor = 'var(--amber)';
     setTimeout(() => {
-      buttonElement.innerText = originalText;
-      buttonElement.style.borderColor = '';
-      buttonElement.style.color = '';
+      btn.innerText = orig;
+      btn.style.color = '';
+      btn.style.borderColor = '';
     }, 2000);
-  }).catch((err) => {
-    console.error('Failed to copy code: ', err);
   });
 }

@@ -615,3 +615,53 @@ footer .meta {
   .hero > * { opacity: 1; }
   .cur { opacity: 1; }
 }
+
+/* Math & Equation Styling (ponytail.dev terminal spec style) */
+.math-block {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--amber);
+  border-radius: 4px;
+  padding: 16px 20px;
+  margin: 1.2em 0;
+  overflow-x: auto;
+}
+
+.math-title {
+  color: var(--dim);
+  font-size: .78rem;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.math-eq {
+  color: var(--amber);
+  font-size: 1.02rem;
+  font-weight: 600;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.math-inline {
+  color: var(--amber);
+  background: var(--panel);
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+  font-size: .9em;
+}
+
+h3.spec-h3 {
+  font-size: 1.15rem;
+  color: var(--fg);
+  margin: 1.8em 0 .6em;
+  font-weight: 700;
+}
+
+h3.spec-h3::before {
+  content: "### ";
+  color: var(--amber);
+}
+

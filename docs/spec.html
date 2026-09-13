@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apah — Technical & Mathematical Specification</title>
+  <meta name="description" content="Technical and mathematical specification for Apah: continuous batching, PagedAttention KV cache, Megatron-LM tensor parallelism, and SHA256 audit log hash chains.">
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+
+  <!-- Top Navigation Editor Chrome Bar -->
+  <header class="chrome" aria-label="Editor Chrome Header">
+    <span class="dots"><i></i><i></i><i></i></span>
+    <span class="file">~/apah / spec.md</span>
+    <div class="tabs">
+      <a class="tab" href="index.html">README.md</a>
+      <a class="tab on" href="spec.html">spec.md</a>
+      <a class="tab" href="setup.html">setup.md</a>
+      <a class="tab new" href="https://github.com/p19racha/Apah" target="_blank" rel="noopener">github.com</a>
+    </div>
+    <button id="lightbtn" class="lightbtn" aria-label="Toggle theme">[theme: dark]</button>
+  </header>
+
+  <div class="wrap">
+
+    <!-- Hero Section -->
+    <header class="hero" id="hero">
+      <h1>spec.md<span class="cur">▋</span></h1>
+      <p class="tag">// technical & mathematical specification</p>
+      <p class="sub">
+        Formal mathematical foundations and system design of the Apah LLM Inference Runtime — customized for sovereign, 100% air-gapped industrial AI workbenches.
+      </p>
+
+      <div class="cta">
+        <a href="index.html" class="btn fill">back to main</a>
+        <a href="https://github.com/p19racha/Apah" target="_blank" rel="noopener" class="btn">view source</a>
+      </div>
+    </header>
+
+    <main>
+
+      <!-- Section 1: Architecture -->
+      <section id="architectural_principles">
+        <p class="label">architecture</p>
+        <h2>system_topology</h2>
+
+        <p class="sub" style="margin-top:0; margin-bottom: 1.5em;">
+          Apah is a low-latency, high-throughput custom LLM inference engine designed from first principles to execute on NVIDIA GPUs with zero network egress:
+        </p>
+
+        <div class="term" style="font-size: 0.8rem; line-height: 1.5;">
+          <pre style="margin: 0; color: var(--fg);">
+  +-------------------------------------------------------+
+  |    Sovereign Workbench Agentic Applications           |
+  +-------------------------------------------------------+
+                      |
+     +----------------+----------------+
+     |                                 |
+OpenAI-Compatible API                 Ollama Native Shim
+(/v1/chat/completions)               (/api/chat, /api/embeddings)
+     |                                 |
+     +----------------+----------------+
+                      |
+           +----------------------+
+           |  FastAPI Server Layer|
+           +----------------------+
+                      |
+              +-------+-------+
+              |               |
+   +--------------------+   +-------------------+
+   | Network & Airgap   |   | Tamper-Evident    |
+   | Guard (Socket Patch|   | Audit Logger      |
+   +--------------------+   +-------------------+
+                      |
+     +----------------+----------------+
+     | Continuous Batching Scheduler   |
+     +---------------------------------+
+                      |
+     +----------------+----------------+
+     |  PagedAttention Memory Engine   |
+     |  (BlockPool & BlockTable)       |
+     +---------------------------------+
+                      |
+     +----------------+----------------+
+     |  Tensor Parallel Execution      |
+     |  (NCCL AllReduce / Column-Row)  |
+     +---------------------------------+
+                      |
+     +----------------+----------------+
+     |  CUDA Hardware Execution Engine |
+     +---------------------------------+
+          </pre>
+        </div>
+      </section>
+
+      <!-- Section 2: Mathematical Formalisms -->
+      <section id="mathematical_formalisms">
+        <p class="label">math_formalisms</p>
+        <h2>core_algorithms</h2>
+
+        <!-- 2.1 -->
+        <h3 class="spec-h3">2.1 Autoregressive Decoding & KV-Cache Formulation</h3>
+        <p class="sub" style="margin-top: 0.4em;">
+          Let <span class="math-inline">X = (x_1, x_2, ..., x_n)</span> represent an input sequence of tokens. The autoregressive probability of generating sequence <span class="math-inline">X</span> is factorized as:
+        </p>
+
+        <div class="math-block">
+          <div class="math-title">Sequence Probability Factorization</div>
+          <div class="math-eq">P(X) = ∏_{t=1}^n P(x_t | x_1, x_2, ..., x_{t-1})</div>
+        </div>
+
+        <p class="sub">
+          At generation step <span class="math-inline">t</span>, temperature-scaled Softmax over vocabulary size <span class="math-inline">V</span> produces next-token probabilities:
+        </p>
+
+        <div class="math-block">
+          <div class="math-title">Softmax Logits Probability</div>
+          <div class="math-eq">P(x_t = k | x_{&lt;t}) = exp(z_{t,k} / τ) / ∑_{j=1}^{V} exp(z_{t,j} / τ)</div>
+        </div>
+
+        <p class="sub">
+          Key and Value activation matrices are appended per step without re-computing past tokens:
+        </p>
+
+        <div class="math-block">
+          <div class="math-title">KV Cache Concatenation & Attention</div>
+          <div class="math-eq">K_{≤t} = [K_{&lt;t} ‖ K_t],   V_{≤t} = [V_{&lt;t} ‖ V_t]
+Attention(Q_t, K_{≤t}, V_{≤t}) = Softmax( Q_t · K_{≤t}^T / √d_k ) · V_{≤t}</div>
+        </div>
+
+        <!-- 2.2 -->
+        <h3 class="spec-h3">2.2 PagedAttention Memory Management Engine</h3>
+        <p class="sub" style="margin-top: 0.4em;">
+          Traditional padded allocation requires contiguous VRAM <span class="math-inline">M_{padded} = 2 · B · L · H_{kv} · L_{max} · D · b_{bytes}</span>, leading to memory waste:
+        </p>
+
+        <div class="math-block">
+          <div class="math-title">Paged VRAM Footprint & Waste Bound</div>
+          <div class="math-eq">M_{paged} = 2 · L · H_{kv} · D · b_{bytes} · B_{block} · ∑_{i=1}^B ⌈ L_i / B_{block} ⌉
+
+Waste Bound: W_{paged} &lt; B_{block} / L_i ≤ 16 / 128 = 12.5%</div>
+        </div>
+
+        <p class="sub">
+          Block table lookup maps logical token index <span class="math-inline">i</span> to physical block pool coordinates:
+        </p>
+
+        <div class="math-block">
+          <div class="math-title">Physical Block Index & Offset Mapping</div>
+          <div class="math-eq">P(s, i) = BlockTable[s][ ⌊ i / B_{block} ⌋ ]
+O(i) = i mod B_{block}
+K_{physical}(s, i) = BlockPool[ P(s, i), O(i), layer_idx ]</div>
+        </div>
+
+        <!-- 2.3 -->
+        <h3 class="spec-h3">2.3 Multi-GPU Tensor Parallelism (Megatron-LM Style)</h3>
+        <p class="sub" style="margin-top: 0.4em;">
+          Column-parallel layers split projection weights along columns across <span class="math-inline">N</span> GPUs: <span class="math-inline">W = [W_1, W_2, ..., W_N]</span>. Each GPU computes <span class="math-inline">Y_i = X · W_i</span> independently.
+        </p>
+
+        <p class="sub">
+          Row-parallel layers split weights along rows: <span class="math-inline">W = [W_1; W_2; ...; W_N]</span>. Results are aggregated via an NCCL <span class="math-inline">AllReduce-Sum</span>:
+        </p>
+
+        <div class="math-block">
+          <div class="math-title">Row-Parallel AllReduce-Sum</div>
+          <div class="math-eq">Y = AllReduce-Sum( ∑_{i=1}^N X_i · W_i )</div>
+        </div>
+
+        <!-- 2.4 -->
+        <h3 class="spec-h3">2.4 Tamper-Evident Cryptographic SHA256 Hash Chain</h3>
+        <p class="sub" style="margin-top: 0.4em;">
+          Every inference request and system event is linked to previous hashes in a tamper-evident audit log:
+        </p>
+
+        <div class="math-block">
+          <div class="math-title">Hash Chain Formula (k ≥ 1)</div>
+          <div class="math-eq">H_0 = "0000000000000000000000000000000000000000000000000000000000000000"
+H_k = SHA256( H_{k-1} ‖ ":" ‖ CanonicalJSON(E_k) )</div>
+        </div>
+      </section>
+
+      <!-- Section 3: Airgap Isolation -->
+      <section id="airgap_isolation">
+        <p class="label">airgap_isolation</p>
+        <h2>network_hardening</h2>
+
+        <ul style="color: var(--dim); padding-left: 20px; line-height: 1.85;">
+          <li><b style="color: var(--fg);">Socket Interception:</b> When <code>APAH_AIRGAP_MODE=1</code> is enabled, lower-level socket connections to external non-loopback IP addresses throw <code>AirgapViolationError</code>.</li>
+          <li><b style="color: var(--fg);">Loopback Exception:</b> Connections to <code>127.0.0.1</code>, <code>localhost</code>, and <code>::1</code> remain open for local agent IPC.</li>
+          <li><b style="color: var(--fg);">OS Sandbox:</b> Systemd unit file enforces <code>PrivateNetwork=true</code>, <code>ProtectSystem=strict</code>, and <code>NoNewPrivileges=true</code>.</li>
+        </ul>
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer>
+      <p class="q">the best inference is the inference that never leaves the building.</p>
+      <div class="prompt"><span class="p">~/apah ❯</span> apah audit verify /var/log/apah/audit.jsonl</div>
+      <p class="meta">Apah Technical Specification // Apache 2.0 License // <a href="index.html">Main Overview</a></p>
+    </footer>
+
+  </div>
+
+</body>
+</html>

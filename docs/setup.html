@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apah — GitHub Pages Setup & Verification Guide</title>
+  <meta name="description" content="Setup and verification guide for Apah one-line script installers hosted on GitHub Pages.">
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+
+  <!-- Top Navigation Editor Chrome Bar -->
+  <header class="chrome" aria-label="Editor Chrome Header">
+    <span class="dots"><i></i><i></i><i></i></span>
+    <span class="file">~/apah / setup.md</span>
+    <div class="tabs">
+      <a class="tab" href="index.html">README.md</a>
+      <a class="tab" href="spec.html">spec.md</a>
+      <a class="tab on" href="setup.html">setup.md</a>
+      <a class="tab new" href="https://github.com/p19racha/Apah" target="_blank" rel="noopener">github.com</a>
+    </div>
+    <button id="lightbtn" class="lightbtn" aria-label="Toggle theme">[theme: dark]</button>
+  </header>
+
+  <div class="wrap">
+
+    <!-- Hero Section -->
+    <header class="hero" id="hero">
+      <h1>setup.md<span class="cur">▋</span></h1>
+      <p class="tag">// github pages & script hosting setup guide</p>
+      <p class="sub">
+        Step-by-step instructions for hosting and verifying Apah one-line installer scripts on GitHub Pages.
+      </p>
+
+      <div class="cta">
+        <a href="index.html" class="btn fill">back to main</a>
+        <a href="https://github.com/p19racha/Apah" target="_blank" rel="noopener" class="btn">repository settings</a>
+      </div>
+    </header>
+
+    <main>
+
+      <!-- Section 1: GitHub Pages Setup -->
+      <section id="gh_pages_setup">
+        <p class="label">gh_pages_setup</p>
+        <h2>deployment_steps</h2>
+
+        <ol class="ladder">
+          <li>
+            <span><b>Open Repository Settings:</b> Navigate to your GitHub repository at <code>https://github.com/p19racha/Apah</code>.</span>
+          </li>
+          <li>
+            <span><b>Access Pages Tab:</b> Click on the <b>Settings</b> tab in the top navigation bar, then select <b>Pages</b> under <i>Code and automation</i>.</span>
+          </li>
+          <li>
+            <span><b>Configure Source Branch:</b> Under <b>Build and deployment</b>, set <b>Source</b> to <code>Deploy from a branch</code>.</span>
+          </li>
+          <li>
+            <span><b>Select Folder Directory:</b> Select <code>main</code> branch and specify <code>/docs</code> as the root folder directory.</span>
+          </li>
+          <li>
+            <span><b>Save & Publish:</b> Click <b>Save</b>. GitHub Pages will build and deploy the landing page at <code>https://p19racha.github.io/Apah/</code>.</span>
+          </li>
+        </ol>
+      </section>
+
+      <!-- Section 2: Script Verification -->
+      <section id="script_verification">
+        <p class="label">script_verification</p>
+        <h2>plain_text_validation</h2>
+
+        <p class="sub" style="margin-top: 0; margin-bottom: 1.5em;">
+          Before running piped execution (<code>curl ... | sh</code>), verify that GitHub Pages serves <code>install.sh</code> as plain text:
+        </p>
+
+        <div class="term">
+          <button class="copy-btn-inline" onclick="copyCode(this, 'verify-cmd')">[copy]</button>
+          <span class="p">~/apah $</span> <span id="verify-cmd">curl -fsSL https://p19racha.github.io/Apah/install.sh | head -n 10</span>
+        </div>
+
+        <p class="sub" style="margin-top: 1.2em;">
+          Expected raw output header:
+        </p>
+
+        <div class="diff">
+          <div class="bar">
+            <span>EXPECTED HEADER</span>
+            <span>install.sh</span>
+          </div>
+          <pre>
+<span class="ln add">+ #!/bin/sh</span>
+<span class="ln add">+ # Apah POSIX One-Line Installer for Linux and macOS</span>
+</pre>
+        </div>
+      </section>
+
+      <!-- Section 3: Installer Commands -->
+      <section id="installer_commands">
+        <p class="label">installer_commands</p>
+        <h2>production_commands</h2>
+
+        <div class="others">
+          <div>
+            <h3>linux & macos (posix sh)</h3>
+            <code>curl -fsSL https://p19racha.github.io/Apah/install.sh | sh</code>
+          </div>
+          <div>
+            <h3>windows (powershell)</h3>
+            <code>irm https://p19racha.github.io/Apah/install.ps1 | iex</code>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer>
+      <p class="q">the best inference is the inference that never leaves the building.</p>
+      <div class="prompt"><span class="p">~/apah ❯</span> curl -fsSL https://p19racha.github.io/Apah/install.sh | sh</div>
+      <p class="meta">Apah Setup Guide // Apache 2.0 License // <a href="index.html">Main Overview</a></p>
+    </footer>
+
+  </div>
+
+</body>
+</html>

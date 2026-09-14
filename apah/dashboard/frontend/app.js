@@ -1,8 +1,8 @@
-/* Apah Sovereign AI Control Dashboard JavaScript — App Logic */
+/* Apah Sovereign AI Control Dashboard JavaScript — Minimalist & Robust App Engine */
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Global State
-  let state = {
+  // App State
+  const state = {
     models: [],
     loadedModelStatus: null,
     gpuStats: [],
@@ -13,25 +13,31 @@ document.addEventListener('DOMContentLoaded', () => {
     wsStats: null,
   };
 
-  // DOM Elements
+  // Toast Notifications
+  function showToast(message, isError = false) {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    if (isError) toast.style.borderColor = '#71717a';
+    toast.textContent = message;
+
+    container.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(-10px)';
+      setTimeout(() => toast.remove(), 200);
+    }, 3500);
+  }
+
+  // Navigation Setup
   const navItems = document.querySelectorAll('.nav-item');
   const viewSections = document.querySelectorAll('.view-section');
   const detailPanel = document.getElementById('detailPanel');
   const btnClosePanel = document.getElementById('btnClosePanel');
   const panelTabs = document.querySelectorAll('.panel-tab');
 
-  // Modals
-  const addModelModal = document.getElementById('addModelModal');
-  const manifestModal = document.getElementById('manifestModal');
-  const btnOpenAddModel = document.getElementById('btnOpenAddModel');
-  const btnOpenAddModel2 = document.getElementById('btnOpenAddModel2');
-  const btnCloseAddModel = document.getElementById('btnCloseAddModel');
-  const btnCancelAddModel = document.getElementById('btnCancelAddModel');
-  const formAddModel = document.getElementById('formAddModel');
-  const selectSource = document.getElementById('selectSource');
-  const groupLocalPath = document.getElementById('groupLocalPath');
-
-  // Navigation Setup
   navItems.forEach(item => {
     item.addEventListener('click', () => {
       const targetView = item.getAttribute('data-view');
@@ -44,7 +50,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Panel Tabs Setup
   panelTabs.forEach(tab => {
     tab.addEventListener('click', () => {
       const targetPtab = tab.getAttribute('data-ptab');
@@ -56,20 +61,26 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  btnClosePanel.addEventListener('click', () => {
+  btnClosePanel?.addEventListener('click', () => {
     detailPanel.classList.add('hidden');
     document.querySelectorAll('#modelsTableBody tr').forEach(r => r.classList.remove('selected'));
   });
 
-  // Modal Open/Close handlers
+  // Modal Handlers
+  const addModelModal = document.getElementById('addModelModal');
+  const manifestModal = document.getElementById('manifestModal');
+  const selectSource = document.getElementById('selectSource');
+  const groupLocalPath = document.getElementById('groupLocalPath');
+
   const openAddModelModal = () => addModelModal.classList.remove('hidden');
   const closeAddModelModal = () => addModelModal.classList.add('hidden');
-  btnOpenAddModel?.addEventListener('click', openAddModelModal);
-  btnOpenAddModel2?.addEventListener('click', openAddModelModal);
-  btnCloseAddModel?.addEventListener('click', closeAddModelModal);
-  btnCancelAddModel?.addEventListener('click', closeAddModelModal);
 
-  selectSource.addEventListener('change', () => {
+  document.getElementById('btnOpenAddModel')?.addEventListener('click', openAddModelModal);
+  document.getElementById('btnOpenAddModel2')?.addEventListener('click', openAddModelModal);
+  document.getElementById('btnCloseAddModel')?.addEventListener('click', closeAddModelModal);
+  document.getElementById('btnCancelAddModel')?.addEventListener('click', closeAddModelModal);
+
+  selectSource?.addEventListener('change', () => {
     groupLocalPath.style.display = selectSource.value === 'local' ? 'block' : 'none';
   });
 
@@ -90,13 +101,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!isoStr) return '-';
     try {
       const d = new Date(isoStr);
-      return d.toLocaleString();
+      return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     } catch (e) {
       return isoStr;
     }
   }
 
-  // Data Fetching: Models & Process Status
+  // Fetch Models & Process Status
   async function loadModelsData() {
     try {
       const [modelsResp, psResp] = await Promise.all([
@@ -104,12 +115,12 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch('/ps').then(r => r.ok ? r.json() : []),
       ]);
 
-      state.models = modelsResp;
-      state.loadedModelStatus = psResp.length > 0 ? psResp[0] : null;
+      state.models = Array.isArray(modelsResp) ? modelsResp : [];
+      state.loadedModelStatus = (Array.isArray(psResp) && psResp.length > 0) ? psResp[0] : null;
 
       renderModelsView();
     } catch (err) {
-      console.error('Error fetching models:', err);
+      console.error('Error fetching models data:', err);
     }
   }
 
@@ -121,35 +132,40 @@ document.addEventListener('DOMContentLoaded', () => {
     const totalModelsVal = document.getElementById('totalModelsVal');
     const totalSizeSub = document.getElementById('totalSizeSub');
 
+    if (!tbody) return;
+
     totalModelsVal.textContent = state.models.length;
-    tableCount.textContent = `${state.models.length} models`;
+    tableCount.textContent = `${state.models.length} MODELS`;
 
     const totalBytes = state.models.reduce((sum, m) => sum + (m.size_bytes || 0), 0);
     totalSizeSub.textContent = `Total Size: ${formatBytes(totalBytes)}`;
 
     if (state.loadedModelStatus && state.loadedModelStatus.loaded) {
       activeModelVal.textContent = state.loadedModelStatus.name;
-      activeModelSub.textContent = `${state.loadedModelStatus.gpu_memory_mb.toFixed(1)} MB GPU VRAM • Uptime ${state.loadedModelStatus.uptime_seconds.toFixed(0)}s`;
+      activeModelSub.textContent = `${state.loadedModelStatus.gpu_memory_mb.toFixed(1)} MB VRAM • Uptime ${state.loadedModelStatus.uptime_seconds.toFixed(0)}s`;
     } else {
-      activeModelVal.textContent = 'None Loaded';
+      activeModelVal.textContent = 'NONE';
       activeModelSub.textContent = '0 MB GPU VRAM';
     }
 
     if (state.models.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 24px;">No local models found in ~/.apah/models/. Use "+ Add Model" to pull one.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 24px;">No local model manifests found in ~/.apah/models/. Use "+ ADD MODEL" to pull one.</td></tr>`;
       return;
     }
 
-    const searchTerm = document.getElementById('searchModels').value.toLowerCase();
+    const searchTerm = (document.getElementById('searchModels')?.value || '').toLowerCase();
     const filteredModels = state.models.filter(m => 
       m.name.toLowerCase().includes(searchTerm) || (m.quant && m.quant.toLowerCase().includes(searchTerm))
     );
 
     tbody.innerHTML = filteredModels.map(m => {
-      const isLoaded = state.loadedModelStatus && (state.loadedModelStatus.name === m.name || state.loadedModelStatus.name === `${m.name}:${m.version}`);
+      const isLoaded = state.loadedModelStatus && (
+        state.loadedModelStatus.name === m.name || 
+        state.loadedModelStatus.name === `${m.name}:${m.version}`
+      );
       const statusBadge = isLoaded 
-        ? `<span class="badge badge-success">Loaded</span>` 
-        : `<span class="badge badge-secondary">Unloaded</span>`;
+        ? `<span class="badge badge-mono-active">LOADED</span>` 
+        : `<span class="badge badge-mono-idle">UNLOADED</span>`;
 
       return `
         <tr data-model-name="${m.name}" data-version="${m.version}">
@@ -159,12 +175,11 @@ document.addEventListener('DOMContentLoaded', () => {
           <td>${formatBytes(m.size_bytes)}</td>
           <td>${statusBadge}</td>
           <td>${formatDate(m.pulled_at)}</td>
-          <td><button class="btn btn-sm btn-select-row">Details</button></td>
+          <td><button class="btn btn-sm">DETAILS</button></td>
         </tr>
       `;
     }).join('');
 
-    // Attach row click events
     tbody.querySelectorAll('tr').forEach(row => {
       row.addEventListener('click', () => {
         const name = row.getAttribute('data-model-name');
@@ -182,47 +197,53 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('#modelsTableBody tr').forEach(r => r.classList.remove('selected'));
     if (rowElement) rowElement.classList.add('selected');
 
-    // Populate Right Panel
     document.getElementById('panelModelName').textContent = modelObj.name;
     document.getElementById('panelVersion').textContent = modelObj.version || 'v1.0.0';
     document.getElementById('panelQuant').textContent = modelObj.quant || 'none';
     document.getElementById('panelSize').textContent = formatBytes(modelObj.size_bytes);
     document.getElementById('panelSha256').textContent = modelObj.checksum_sha256 ? modelObj.checksum_sha256.substring(0, 16) + '...' : '-';
 
-    const isLoaded = state.loadedModelStatus && (state.loadedModelStatus.name === modelObj.name || state.loadedModelStatus.name === `${modelObj.name}:${modelObj.version}`);
+    const isLoaded = state.loadedModelStatus && (
+      state.loadedModelStatus.name === modelObj.name || 
+      state.loadedModelStatus.name === `${modelObj.name}:${modelObj.version}`
+    );
     const badgeContainer = document.getElementById('panelStatusBadge');
     const loadBtn = document.getElementById('btnPanelLoadUnload');
 
     if (isLoaded) {
-      badgeContainer.innerHTML = `<span class="badge badge-success">LOADED</span>`;
-      loadBtn.textContent = 'Unload Model';
-      loadBtn.className = 'btn btn-danger';
+      badgeContainer.innerHTML = `<span class="badge badge-mono-active">LOADED</span>`;
+      loadBtn.textContent = 'UNLOAD MODEL';
     } else {
-      badgeContainer.innerHTML = `<span class="badge badge-secondary">UNLOADED</span>`;
-      loadBtn.textContent = 'Load Model';
-      loadBtn.className = 'btn btn-primary';
+      badgeContainer.innerHTML = `<span class="badge badge-mono-idle">UNLOADED</span>`;
+      loadBtn.textContent = 'LOAD MODEL';
     }
 
     detailPanel.classList.remove('hidden');
   }
 
-  // Model Actions: Load / Unload / Manifest / Copy
-  document.getElementById('btnPanelLoadUnload').addEventListener('click', async () => {
+  // Load / Unload / Manifest / Copy Actions
+  document.getElementById('btnPanelLoadUnload')?.addEventListener('click', async () => {
     if (!state.selectedModel) return;
-    const isLoaded = state.loadedModelStatus && (state.loadedModelStatus.name === state.selectedModel.name || state.loadedModelStatus.name === `${state.selectedModel.name}:${state.selectedModel.version}`);
+    const isLoaded = state.loadedModelStatus && (
+      state.loadedModelStatus.name === state.selectedModel.name || 
+      state.loadedModelStatus.name === `${state.selectedModel.name}:${state.selectedModel.version}`
+    );
+
+    const btn = document.getElementById('btnPanelLoadUnload');
+    btn.disabled = true;
 
     if (isLoaded) {
-      // Unload
       try {
         const res = await fetch('/unload', { method: 'POST' }).then(r => r.json());
-        alert(res.message || 'Model unloaded.');
+        showToast(res.message || 'Model unloaded successfully.');
         await loadModelsData();
         if (state.selectedModel) selectModelRow(state.selectedModel, null);
       } catch (err) {
-        alert('Failed to unload model: ' + err.message);
+        showToast('Failed to unload model: ' + err.message, true);
+      } finally {
+        btn.disabled = false;
       }
     } else {
-      // Load
       try {
         const payload = { model_path: state.selectedModel.name };
         const res = await fetch('/load', {
@@ -232,33 +253,35 @@ document.addEventListener('DOMContentLoaded', () => {
         }).then(r => r.json());
 
         if (res.error) {
-          alert('Load failed: ' + (res.error.message || res.error));
+          showToast('Load failed: ' + (res.error.message || res.error), true);
         } else {
-          alert(res.message || 'Model loaded successfully.');
+          showToast(res.message || 'Model loaded successfully.');
           await loadModelsData();
           if (state.selectedModel) selectModelRow(state.selectedModel, null);
         }
       } catch (err) {
-        alert('Failed to load model: ' + err.message);
+        showToast('Failed to load model: ' + err.message, true);
+      } finally {
+        btn.disabled = false;
       }
     }
   });
 
-  document.getElementById('btnPanelShowManifest').addEventListener('click', () => {
+  document.getElementById('btnPanelShowManifest')?.addEventListener('click', () => {
     if (!state.selectedModel) return;
-    document.getElementById('manifestModalTitle').textContent = `Manifest: ${state.selectedModel.name}`;
+    document.getElementById('manifestModalTitle').textContent = `MANIFEST: ${state.selectedModel.name}`;
     document.getElementById('manifestJsonContent').textContent = JSON.stringify(state.selectedModel, null, 2);
     manifestModal.classList.remove('hidden');
   });
 
-  document.getElementById('btnPanelCopyName').addEventListener('click', () => {
+  document.getElementById('btnPanelCopyName')?.addEventListener('click', () => {
     if (!state.selectedModel) return;
     navigator.clipboard.writeText(state.selectedModel.name);
-    alert(`Copied model name '${state.selectedModel.name}' to clipboard!`);
+    showToast(`Copied '${state.selectedModel.name}' to clipboard`);
   });
 
-  // Add / Pull Model Form Submission
-  formAddModel.addEventListener('submit', async (e) => {
+  // Form Add / Pull Model Submission
+  document.getElementById('formAddModel')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const modelName = document.getElementById('inputModelName').value.trim();
     const source = selectSource.value;
@@ -267,7 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const btnSubmit = document.getElementById('btnSubmitPull');
     btnSubmit.disabled = true;
-    btnSubmit.textContent = 'Pulling...';
+    btnSubmit.textContent = 'PULLING...';
 
     try {
       const payload = {
@@ -284,21 +307,21 @@ document.addEventListener('DOMContentLoaded', () => {
       }).then(r => r.json());
 
       if (res.detail) {
-        alert('Pull error: ' + res.detail);
+        showToast('Pull failed: ' + res.detail, true);
       } else {
-        alert(`Successfully pulled '${modelName}'!`);
+        showToast(`Successfully pulled '${modelName}'`);
         closeAddModelModal();
         await loadModelsData();
       }
     } catch (err) {
-      alert('Error during pull: ' + err.message);
+      showToast('Error during pull: ' + err.message, true);
     } finally {
       btnSubmit.disabled = false;
-      btnSubmit.textContent = 'Pull Model';
+      btnSubmit.textContent = 'PULL MODEL';
     }
   });
 
-  // Settings View: Fetch & Save Config
+  // Settings view
   async function loadConfigData() {
     try {
       const cfg = await fetch('/config').then(r => r.json());
@@ -307,8 +330,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const airgapBadge = document.getElementById('cfgAirgapStatus');
       airgapBadge.innerHTML = cfg.airgap_mode_enabled 
-        ? `<span class="badge badge-success">ENABLED (Socket Isolation)</span>` 
-        : `<span class="badge badge-secondary">DISABLED</span>`;
+        ? `<span class="badge badge-mono-active">ENABLED</span>` 
+        : `<span class="badge badge-mono-idle">DISABLED</span>`;
 
       document.getElementById('cfgAuditContent').textContent = cfg.audit_log_content ? 'Full Content' : 'Metadata Only';
       document.getElementById('cfgAuditPath').textContent = cfg.audit_log_path;
@@ -317,7 +340,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  document.getElementById('btnSaveConfig').addEventListener('click', async () => {
+  document.getElementById('btnSaveConfig')?.addEventListener('click', async () => {
     const idleVal = parseInt(document.getElementById('settingIdleTimeout').value, 10);
     const autoVal = document.getElementById('settingAutoUnload').checked;
 
@@ -331,24 +354,20 @@ document.addEventListener('DOMContentLoaded', () => {
         })
       }).then(r => r.json());
 
-      const statusEl = document.getElementById('configSavedStatus');
-      statusEl.textContent = 'Settings saved successfully!';
-      setTimeout(() => { statusEl.textContent = ''; }, 3000);
+      showToast('Configuration updated successfully.');
     } catch (err) {
-      alert('Failed to save config: ' + err.message);
+      showToast('Failed to save config: ' + err.message, true);
     }
   });
 
-  // Search Filter Handler
-  document.getElementById('searchModels').addEventListener('input', renderModelsView);
+  document.getElementById('searchModels')?.addEventListener('input', renderModelsView);
 
-  // WebSockets Setup: /ws/logs and /ws/stats
+  // WebSockets Setup
   function connectLogsWebSocket() {
     const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${wsProtocol}//${location.host}/ws/logs`;
 
     state.wsLogs = new WebSocket(wsUrl);
-    const logContainer = document.getElementById('logContainer');
     const countBadge = document.getElementById('logCountBadge');
 
     state.wsLogs.onopen = () => {
@@ -360,21 +379,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const rawLine = event.data;
       state.logEntries.push(rawLine);
-      countBadge.textContent = `${state.logEntries.length} events`;
+      if (countBadge) countBadge.textContent = `${state.logEntries.length} EVENTS`;
 
       renderLogs();
     };
 
     state.wsLogs.onclose = () => {
-      console.warn('WebSocket /ws/logs closed. Reconnecting in 2s...');
       setTimeout(connectLogsWebSocket, 2000);
     };
   }
 
   function renderLogs() {
     const logContainer = document.getElementById('logContainer');
+    if (!logContainer) return;
+
     const filterType = document.getElementById('logTypeFilter').value;
-    const filterSearch = document.getElementById('logSearch').value.toLowerCase();
+    const filterSearch = (document.getElementById('logSearch')?.value || '').toLowerCase();
 
     const filtered = state.logEntries.filter(line => {
       if (filterType !== 'ALL' && !line.includes(`"event_type": "${filterType}"`)) return false;
@@ -386,17 +406,17 @@ document.addEventListener('DOMContentLoaded', () => {
     logContainer.scrollTop = logContainer.scrollHeight;
   }
 
-  document.getElementById('logTypeFilter').addEventListener('change', renderLogs);
-  document.getElementById('logSearch').addEventListener('input', renderLogs);
-  document.getElementById('btnClearLogs').addEventListener('click', () => {
+  document.getElementById('logTypeFilter')?.addEventListener('change', renderLogs);
+  document.getElementById('logSearch')?.addEventListener('input', renderLogs);
+  document.getElementById('btnClearLogs')?.addEventListener('click', () => {
     state.logEntries = [];
-    document.getElementById('logCountBadge').textContent = '0 events';
-    document.getElementById('logContainer').textContent = '';
+    if (document.getElementById('logCountBadge')) document.getElementById('logCountBadge').textContent = '0 EVENTS';
+    if (document.getElementById('logContainer')) document.getElementById('logContainer').textContent = '';
   });
 
-  document.getElementById('btnToggleLogPause').addEventListener('click', function() {
+  document.getElementById('btnToggleLogPause')?.addEventListener('click', function() {
     state.logStreamPaused = !state.logStreamPaused;
-    this.textContent = state.logStreamPaused ? 'Resume Stream' : 'Pause Stream';
+    this.textContent = state.logStreamPaused ? 'RESUME STREAM' : 'PAUSE STREAM';
   });
 
   function connectStatsWebSocket() {
@@ -406,8 +426,10 @@ document.addEventListener('DOMContentLoaded', () => {
     state.wsStats = new WebSocket(wsUrl);
 
     state.wsStats.onopen = () => {
-      document.getElementById('serverStatusDot').className = 'status-dot';
-      document.getElementById('serverStatusText').textContent = 'Server Online';
+      const dot = document.getElementById('serverStatusDot');
+      const text = document.getElementById('serverStatusText');
+      if (dot) dot.className = 'dot active';
+      if (text) text.textContent = 'ONLINE';
     };
 
     state.wsStats.onmessage = (event) => {
@@ -420,8 +442,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     state.wsStats.onclose = () => {
-      document.getElementById('serverStatusDot').className = 'status-dot offline';
-      document.getElementById('serverStatusText').textContent = 'Disconnected';
+      const dot = document.getElementById('serverStatusDot');
+      const text = document.getElementById('serverStatusText');
+      if (dot) dot.className = 'dot';
+      if (text) text.textContent = 'DISCONNECTED';
       setTimeout(connectStatsWebSocket, 2000);
     };
   }
@@ -431,7 +455,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const gpuList = data.gpu || [];
     const sched = data.scheduler || {};
 
-    // Update Topbar & Sidebar VRAM
     let totalUsedMb = 0;
     let totalMaxMb = 0;
     gpuList.forEach(g => {
@@ -441,57 +464,60 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (totalMaxMb === 0 && server.gpu_memory_mb) {
       totalUsedMb = server.gpu_memory_mb;
-      totalMaxMb = 24576; // Default fallback estimate if NVML not queried
+      totalMaxMb = 24576;
     }
 
-    document.getElementById('topbarVramText').textContent = `${totalUsedMb.toFixed(0)} / ${totalMaxMb.toFixed(0)} MB`;
-    
-    const pct = totalMaxMb > 0 ? (totalUsedMb / totalMaxMb) * 100 : 0;
-    document.getElementById('sidebarVramBar').style.width = `${pct.toFixed(1)}%`;
-    document.getElementById('sidebarVramVal').textContent = `${(totalUsedMb/1024).toFixed(1)} / ${(totalMaxMb/1024).toFixed(1)} GB (${pct.toFixed(0)}%)`;
+    const topbarVram = document.getElementById('topbarVramText');
+    if (topbarVram) topbarVram.textContent = `${totalUsedMb.toFixed(0)} / ${totalMaxMb.toFixed(0)} MB`;
 
-    // Telemetry Summary Card
+    const pct = totalMaxMb > 0 ? (totalUsedMb / totalMaxMb) * 100 : 0;
+    const sidebarVramBar = document.getElementById('sidebarVramBar');
+    const sidebarVramVal = document.getElementById('sidebarVramVal');
+    if (sidebarVramBar) sidebarVramBar.style.width = `${pct.toFixed(1)}%`;
+    if (sidebarVramVal) sidebarVramVal.textContent = `${(totalUsedMb/1024).toFixed(1)} / ${(totalMaxMb/1024).toFixed(1)} GB (${pct.toFixed(0)}%)`;
+
     const avgUtil = gpuList.length > 0 ? (gpuList.reduce((acc, g) => acc + g.utilization_pct, 0) / gpuList.length) : 0;
     const avgTemp = gpuList.length > 0 ? (gpuList.reduce((acc, g) => acc + g.temperature_c, 0) / gpuList.length) : 0;
-    document.getElementById('gpuTelemetryVal').textContent = `${avgUtil.toFixed(0)}% Util`;
-    document.getElementById('gpuTempSub').textContent = `${avgTemp.toFixed(0)} °C Avg Temp`;
+    const telemetryVal = document.getElementById('gpuTelemetryVal');
+    const tempSub = document.getElementById('gpuTempSub');
+    if (telemetryVal) telemetryVal.textContent = `${avgUtil.toFixed(0)}% UTIL`;
+    if (tempSub) tempSub.textContent = `${avgTemp.toFixed(0)} °C Avg Temp`;
 
-    // Performance View Cards Grid
     const gpuGrid = document.getElementById('gpuCardsGrid');
-    if (gpuList.length > 0) {
-      gpuGrid.innerHTML = gpuList.map(g => `
-        <div class="card">
-          <div class="card-label">GPU ${g.index}: ${g.name}</div>
-          <div class="card-value">${g.utilization_pct}% Util</div>
-          <div class="progress-bar">
-            <div class="progress-fill" style="width: ${((g.memory_used_mb/g.memory_total_mb)*100).toFixed(1)}%;"></div>
+    if (gpuGrid) {
+      if (gpuList.length > 0) {
+        gpuGrid.innerHTML = gpuList.map(g => `
+          <div class="card">
+            <div class="card-title">GPU ${g.index}: ${g.name}</div>
+            <div class="card-val">${g.utilization_pct}% UTIL</div>
+            <div class="progress-track">
+              <div class="progress-bar" style="width: ${((g.memory_used_mb/g.memory_total_mb)*100).toFixed(1)}%;"></div>
+            </div>
+            <div class="card-sub">${g.memory_used_mb.toFixed(0)} / ${g.memory_total_mb.toFixed(0)} MB VRAM • ${g.temperature_c} °C</div>
           </div>
-          <div class="card-sub">${g.memory_used_mb.toFixed(0)} / ${g.memory_total_mb.toFixed(0)} MB VRAM • ${g.temperature_c} °C</div>
-        </div>
-      `).join('');
-    } else {
-      gpuGrid.innerHTML = `
-        <div class="card">
-          <div class="card-label">GPU Device</div>
-          <div class="card-value">CPU / Virtual Mode</div>
-          <div class="card-sub">No NVML GPU detected</div>
-        </div>
-      `;
+        `).join('');
+      } else {
+        gpuGrid.innerHTML = `
+          <div class="card">
+            <div class="card-title">GPU DEVICE</div>
+            <div class="card-val" style="font-size: 1.1rem;">CPU / VIRTUAL MODE</div>
+            <div class="card-sub">No NVML GPU detected</div>
+          </div>
+        `;
+      }
     }
 
-    // Performance Scheduler metrics
-    document.getElementById('perfActiveBatch').textContent = sched.active_batch_size || 0;
-    document.getElementById('perfWaitQueue').textContent = sched.waiting_queue_length || 0;
-    document.getElementById('perfThroughput').textContent = `${(sched.aggregate_throughput_tok_s || 0).toFixed(1)} tok/s`;
-    document.getElementById('perfTotalTokens').textContent = (sched.total_tokens_generated || 0).toLocaleString();
+    if (document.getElementById('perfActiveBatch')) document.getElementById('perfActiveBatch').textContent = sched.active_batch_size || 0;
+    if (document.getElementById('perfWaitQueue')) document.getElementById('perfWaitQueue').textContent = sched.waiting_queue_length || 0;
+    if (document.getElementById('perfThroughput')) document.getElementById('perfThroughput').textContent = `${(sched.aggregate_throughput_tok_s || 0).toFixed(1)} TOK/S`;
+    if (document.getElementById('perfTotalTokens')) document.getElementById('perfTotalTokens').textContent = (sched.total_tokens_generated || 0).toLocaleString();
   }
 
-  // Initial Initialization
+  // Initialization
   loadModelsData();
   loadConfigData();
   connectLogsWebSocket();
   connectStatsWebSocket();
 
-  // Periodic Refresh
   setInterval(loadModelsData, 5000);
 });

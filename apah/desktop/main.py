@@ -88,7 +88,7 @@ class ApahDesktopApp:
         logger.info("Apah Desktop App stopped cleanly.")
         sys.exit(0)
 
-    def run() -> None:
+    def run(self) -> None:
         """Main application execution loop."""
         if is_airgap_enabled():
             enable_airgap_mode()

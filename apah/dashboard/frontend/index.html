@@ -3,142 +3,105 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Apah LLM Engine — Local Control Dashboard</title>
+  <title>Apah — Sovereign AI Workbench Dashboard</title>
   <link rel="stylesheet" href="styles.css">
   <script src="app.js" defer></script>
 </head>
 <body>
 
+  <!-- Top Bar -->
+  <header class="topbar">
+    <div class="brand">
+      <img src="assets/apah-logo.svg" alt="Apah Logo">
+      <span class="brand-name">Apah Engine</span>
+      <span class="badge-tag">Sovereign On-Premise AI</span>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-stat">
+        <span class="status-dot" id="serverStatusDot"></span>
+        <span id="serverStatusText">Connecting...</span>
+      </div>
+      <div class="topbar-stat">
+        <span>GPU VRAM:</span>
+        <strong id="topbarVramText">0 / 0 MB</strong>
+      </div>
+      <button class="btn btn-primary btn-sm" id="btnOpenAddModel">
+        <span>+</span> Add Model
+      </button>
+    </div>
+  </header>
+
+  <!-- App Layout -->
   <div class="app-container">
 
-    <!-- Top Navigation Header -->
-    <header class="top-header">
-      <div class="brand">
-        <div class="brand-icon">A</div>
-        <div class="brand-name">Apah Engine</div>
-      </div>
-
-      <div class="search-bar">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="global-search" placeholder="Search models, audit events, system metrics...">
-      </div>
-
-      <div class="header-right">
-        <div class="status-pill airgap" id="airgap-badge">
-          <span class="status-dot"></span>
-          <span>Air-Gapped</span>
-        </div>
-        <div class="status-pill" style="background-color: var(--bg-hover); color: var(--text-main);" id="server-status">
-          <span class="status-dot" style="background-color: var(--success-fg);"></span>
-          <span>Online</span>
-        </div>
-        <button class="icon-btn" id="btn-refresh-all" title="Refresh Telemetry">🔄</button>
-      </div>
-    </header>
-
-    <!-- Sidebar Navigation -->
+    <!-- Left Sidebar -->
     <aside class="sidebar">
-      <nav class="nav-group">
-        <a class="nav-item active" data-view="models">
+      <ul class="nav-list">
+        <li class="nav-item active" data-view="models">
           <span class="nav-icon">📦</span>
           <span>Models</span>
-        </a>
-        <a class="nav-item" data-view="logs">
+        </li>
+        <li class="nav-item" data-view="logs">
           <span class="nav-icon">📜</span>
           <span>Audit Logs</span>
-        </a>
-        <a class="nav-item" data-view="performance">
+        </li>
+        <li class="nav-item" data-view="performance">
           <span class="nav-icon">⚡</span>
           <span>Performance</span>
-        </a>
-        <a class="nav-item" data-view="apikeys">
-          <span class="nav-icon">🔑</span>
-          <span>API Keys</span>
-        </a>
-        <a class="nav-item" data-view="settings">
+        </li>
+        <li class="nav-item" data-view="settings">
           <span class="nav-icon">⚙️</span>
           <span>Settings</span>
-        </a>
-      </nav>
+        </li>
+      </ul>
 
-      <!-- Sidebar Pinned Resource Widget -->
-      <div class="resource-widget">
-        <div class="widget-title">System Resources</div>
-        <div class="progress-group">
-          <div class="progress-label">
-            <span>GPU VRAM</span>
-            <span id="widget-vram-text">0.0 / 0.0 MB</span>
-          </div>
-          <div class="progress-bar-bg">
-            <div class="progress-bar-fill" id="widget-vram-bar" style="width: 0%;"></div>
-          </div>
+      <!-- Pinned Bottom Widget -->
+      <div class="sidebar-widget">
+        <div class="widget-title">GPU VRAM Memory</div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="sidebarVramBar"></div>
         </div>
-        <div class="progress-group">
-          <div class="progress-label">
-            <span>GPU Util</span>
-            <span id="widget-gpu-util">0%</span>
-          </div>
-          <div class="progress-bar-bg">
-            <div class="progress-bar-fill" id="widget-gpu-bar" style="width: 0%; background-color: var(--success-fg);"></div>
-          </div>
-        </div>
+        <div class="widget-value" id="sidebarVramVal">0.0 / 0.0 GB (0%)</div>
       </div>
     </aside>
 
-    <!-- Main Content Workspace -->
+    <!-- Main Workspace -->
     <main class="main-content">
 
-      <!-- View 1: Models View (Default) -->
-      <section id="view-models" class="view-section active">
+      <!-- View 1: Models -->
+      <section id="view-models" class="view-section">
+        <div class="breadcrumb">Dashboard / Models</div>
         <div class="page-header">
-          <div>
-            <div class="breadcrumb">
-              <span>Dashboard</span>
-              <span>/</span>
-              <span class="current">Models</span>
-            </div>
-            <h1 class="page-title">Model Management</h1>
-          </div>
-          <button class="btn btn-primary" id="btn-open-load-modal">➕ Load Local Model</button>
+          <h1 class="page-title">Model Management</h1>
+          <button class="btn btn-primary" id="btnOpenAddModel2">+ Add Model</button>
         </div>
 
-        <!-- Quick Access Summary Cards -->
+        <!-- Summary Cards Grid -->
         <div class="cards-grid">
           <div class="card">
-            <div class="card-header-small">
-              <span>CURRENTLY LOADED</span>
-              <span>⚡</span>
-            </div>
-            <div class="card-value" id="card-active-model-name" style="font-size: 18px;">None</div>
-            <div class="card-subtext" id="card-active-model-sub">GPU VRAM: 0.0 MB</div>
+            <div class="card-label">Active Loaded Model</div>
+            <div class="card-value" id="activeModelVal" style="font-size: 1.1rem; word-break: break-all;">None</div>
+            <div class="card-sub" id="activeModelSub">0 MB GPU VRAM</div>
           </div>
-
           <div class="card">
-            <div class="card-header-small">
-              <span>LOCAL MANIFESTS</span>
-              <span>💾</span>
-            </div>
-            <div class="card-value" id="card-total-models-count">0</div>
-            <div class="card-subtext" id="card-total-size-text">Total size: 0.0 GB</div>
+            <div class="card-label">Local Models Count</div>
+            <div class="card-value" id="totalModelsVal">0</div>
+            <div class="card-sub" id="totalSizeSub">Total Size: 0 GB</div>
           </div>
-
           <div class="card">
-            <div class="card-header-small">
-              <span>GPU HARDWARE</span>
-              <span>🎮</span>
-            </div>
-            <div class="card-value" id="card-gpu-count-text">0 Devices</div>
-            <div class="card-subtext" id="card-gpu-temp-text">Temp: N/A</div>
+            <div class="card-label">GPU Telemetry</div>
+            <div class="card-value" id="gpuTelemetryVal">0% Util</div>
+            <div class="card-sub" id="gpuTempSub">0 °C Avg Temp</div>
           </div>
         </div>
 
-        <!-- Data Table Card -->
+        <!-- Models Data Table Card -->
         <div class="table-card">
-          <div class="table-header-bar">
-            <div class="table-title">Available Models</div>
-            <span style="color: var(--text-muted); font-size: 12px;" id="models-table-count">0 models registered</span>
+          <div class="toolbar">
+            <input type="text" class="search-input" id="searchModels" placeholder="Search model name or quant..." style="width: 260px;">
+            <div style="font-size: 12px; color: var(--text-muted);" id="modelsTableCount">0 models</div>
           </div>
-          <table class="data-table" id="models-table">
+          <table class="data-table" id="modelsTable">
             <thead>
               <tr>
                 <th>Name</th>
@@ -150,222 +113,223 @@
                 <th>Action</th>
               </tr>
             </thead>
-            <tbody id="models-tbody">
+            <tbody id="modelsTableBody">
               <tr>
-                <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">
-                  Loading models manifest data...
-                </td>
+                <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 24px;">Loading local models...</td>
               </tr>
             </tbody>
           </table>
         </div>
       </section>
 
-      <!-- View 2: Audit Logs View -->
-      <section id="view-logs" class="view-section">
+      <!-- View 2: Logs -->
+      <section id="view-logs" class="view-section" style="display: none;">
+        <div class="breadcrumb">Dashboard / Audit Logs</div>
         <div class="page-header">
-          <div>
-            <div class="breadcrumb">
-              <span>Dashboard</span>
-              <span>/</span>
-              <span class="current">Audit Logs</span>
-            </div>
-            <h1 class="page-title">Live Audit Event Log</h1>
-          </div>
-          <div style="display: flex; gap: 10px;">
-            <select id="log-type-filter" class="search-bar" style="padding: 8px 12px; width: 160px;">
-              <option value="all">All Events</option>
-              <option value="model_load">Model Load</option>
-              <option value="model_unload">Model Unload</option>
-              <option value="request_received">Request Received</option>
-              <option value="request_completed">Request Completed</option>
-              <option value="airgap_violation">Airgap Violation</option>
-              <option value="auth_failure">Integrity/Auth Error</option>
-            </select>
+          <h1 class="page-title">Live Audit Log Stream</h1>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-sm" id="btnToggleLogPause">Pause Stream</button>
+            <button class="btn btn-sm" id="btnClearLogs">Clear Logs</button>
           </div>
         </div>
 
-        <div class="table-card">
-          <div class="table-header-bar">
-            <div class="table-title">Live Stream (SHA256 Hash Chained)</div>
-            <span class="badge badge-success" id="log-ws-status">Connected</span>
+        <div class="table-card" style="padding: 16px;">
+          <div class="toolbar" style="padding: 0 0 14px 0; border-bottom: 1px solid var(--border);">
+            <div style="display: flex; gap: 12px; align-items: center;">
+              <select class="select-input" id="logTypeFilter">
+                <option value="ALL">All Event Types</option>
+                <option value="model_load">model_load</option>
+                <option value="model_unload">model_unload</option>
+                <option value="request_received">request_received</option>
+                <option value="request_completed">request_completed</option>
+                <option value="airgap_violation">airgap_violation</option>
+                <option value="auth_failure">auth_failure</option>
+              </select>
+              <input type="text" class="search-input" id="logSearch" placeholder="Filter details..." style="width: 240px;">
+            </div>
+            <span class="badge badge-secondary" id="logCountBadge">0 events</span>
           </div>
-          <div class="log-terminal" id="log-terminal-container">
-            <div class="log-line" style="color: var(--text-sub);">[System] Initializing WebSocket live audit stream...</div>
-          </div>
+
+          <pre class="log-viewer" id="logContainer">Connecting to /ws/logs...</pre>
         </div>
       </section>
 
-      <!-- View 3: Performance View -->
-      <section id="view-performance" class="view-section">
+      <!-- View 3: Performance -->
+      <section id="view-performance" class="view-section" style="display: none;">
+        <div class="breadcrumb">Dashboard / Performance</div>
         <div class="page-header">
-          <div>
-            <div class="breadcrumb">
-              <span>Dashboard</span>
-              <span>/</span>
-              <span class="current">Performance</span>
-            </div>
-            <h1 class="page-title">GPU & Scheduler Telemetry</h1>
-          </div>
+          <h1 class="page-title">GPU Telemetry & Throughput</h1>
         </div>
 
         <!-- GPU Devices Grid -->
-        <div class="cards-grid" id="gpu-cards-container">
+        <div class="cards-grid" id="gpuCardsGrid">
           <div class="card">
-            <div class="card-header-small">GPU Telemetry</div>
-            <div class="card-subtext">Searching for active NVIDIA GPU devices...</div>
+            <div class="card-label">GPU Telemetry</div>
+            <div class="card-value">Gathering metrics...</div>
           </div>
         </div>
 
-        <!-- Continuous Batching Scheduler Telemetry -->
-        <div class="table-card" style="padding: 20px;">
-          <h3 style="font-size: 16px; margin-bottom: 16px;">Continuous Batching Scheduler Metrics</h3>
-          <div class="cards-grid">
-            <div class="card" style="background-color: var(--bg-app);">
-              <div class="card-header-small">ACTIVE BATCH SIZE</div>
-              <div class="card-value" id="perf-active-batch">0</div>
-              <div class="card-subtext">Sequences in parallel decode</div>
-            </div>
-            <div class="card" style="background-color: var(--bg-app);">
-              <div class="card-header-small">WAITING QUEUE</div>
-              <div class="card-value" id="perf-waiting-queue">0</div>
-              <div class="card-subtext">Sequences pending prefill</div>
-            </div>
-            <div class="card" style="background-color: var(--bg-app);">
-              <div class="card-header-small">AGGREGATE THROUGHPUT</div>
-              <div class="card-value" id="perf-throughput">0.0 tok/s</div>
-              <div class="card-subtext">Total generation token rate</div>
-            </div>
+        <!-- Scheduler Metrics Card -->
+        <div class="cards-grid">
+          <div class="card">
+            <div class="card-label">Active Batch Size</div>
+            <div class="card-value" id="perfActiveBatch">0</div>
+          </div>
+          <div class="card">
+            <div class="card-label">Waiting Queue Length</div>
+            <div class="card-value" id="perfWaitQueue">0</div>
+          </div>
+          <div class="card">
+            <div class="card-label">Aggregate Throughput</div>
+            <div class="card-value" id="perfThroughput">0.0 tok/s</div>
+          </div>
+          <div class="card">
+            <div class="card-label">Total Tokens Generated</div>
+            <div class="card-value" id="perfTotalTokens">0</div>
           </div>
         </div>
       </section>
 
-      <!-- View 4: API Keys View (Phase 13 Shell) -->
-      <section id="view-apikeys" class="view-section">
+      <!-- View 4: Settings -->
+      <section id="view-settings" class="view-section" style="display: none;">
+        <div class="breadcrumb">Dashboard / Settings</div>
         <div class="page-header">
-          <div>
-            <div class="breadcrumb">
-              <span>Dashboard</span>
-              <span>/</span>
-              <span class="current">API Keys</span>
+          <h1 class="page-title">Server & Security Configuration</h1>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+          <!-- Idle Timeout Config Card -->
+          <div class="card">
+            <h3 style="font-size: 1.1rem; margin-bottom: 14px;">Idle Management</h3>
+            <div class="form-group">
+              <label class="form-label">Idle Timeout (seconds)</label>
+              <input type="number" class="form-control" id="settingIdleTimeout" value="300" min="10">
             </div>
-            <h1 class="page-title">API Key Authentication</h1>
-          </div>
-          <button class="btn btn-primary" id="btn-add-key" disabled title="Coming in Phase 13">➕ Add Key</button>
-        </div>
-
-        <div class="table-card" style="padding: 30px; text-align: center;">
-          <div style="font-size: 40px; margin-bottom: 10px;">🔑</div>
-          <h3 style="font-size: 18px; margin-bottom: 8px;">API Key Management</h3>
-          <p style="color: var(--text-muted); max-width: 480px; margin: 0 auto 20px;">
-            API key access control and role-based authentication will be implemented in the next update (Phase 13).
-          </p>
-          <div class="badge badge-warning" style="font-size: 13px; padding: 6px 14px;">Placeholder Shell — Phase 13 Update</div>
-        </div>
-      </section>
-
-      <!-- View 5: Settings View -->
-      <section id="view-settings" class="view-section">
-        <div class="page-header">
-          <div>
-            <div class="breadcrumb">
-              <span>Dashboard</span>
-              <span>/</span>
-              <span class="current">Settings</span>
+            <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
+              <input type="checkbox" id="settingAutoUnload" checked>
+              <label for="settingAutoUnload" class="form-label" style="margin: 0; cursor: pointer;">Enable Automatic Idle Model Unload</label>
             </div>
-            <h1 class="page-title">System Settings & Security</h1>
+            <button class="btn btn-primary" id="btnSaveConfig">Save Configuration</button>
+            <div id="configSavedStatus" style="margin-top: 10px; font-size: 12px; color: var(--success);"></div>
           </div>
-        </div>
 
-        <div class="table-card" style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
-          <div class="detail-row">
-            <span class="detail-label">Runtime Engine</span>
-            <span class="detail-val">Apah Sovereign LLM Runtime v0.5.0</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Airgap Network Isolation</span>
-            <span class="detail-val" id="setting-airgap-mode">ENABLED (Process-level socket interception)</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Idle Auto-Unload Timeout</span>
-            <span class="detail-val" id="setting-idle-timeout">300 seconds</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Local Server Host</span>
-            <span class="detail-val">http://localhost:11500</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Model Storage Path</span>
-            <span class="detail-val">~/.apah/models/</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Audit Log Storage</span>
-            <span class="detail-val">~/.apah/audit_logs/ (SHA256 Hash Chain)</span>
+          <!-- Security Posture Card -->
+          <div class="card">
+            <h3 style="font-size: 1.1rem; margin-bottom: 14px;">Air-Gap Security Posture</h3>
+            <div class="detail-group">
+              <div class="detail-label">Air-Gap Mode</div>
+              <div class="detail-value" id="cfgAirgapStatus"><span class="badge badge-success">ENABLED</span></div>
+            </div>
+            <div class="detail-group">
+              <div class="detail-label">Audit Content Mode</div>
+              <div class="detail-value" id="cfgAuditContent">Metadata Only</div>
+            </div>
+            <div class="detail-group">
+              <div class="detail-label">Audit Log Path</div>
+              <div class="detail-value code" id="cfgAuditPath">~/.apah/audit.jsonl</div>
+            </div>
           </div>
         </div>
       </section>
 
     </main>
 
-    <!-- Collapsible Right-Side Detail Panel -->
-    <aside class="detail-panel" id="detail-panel">
+    <!-- Collapsible Right Detail Panel -->
+    <aside class="detail-panel hidden" id="detailPanel">
       <div class="panel-header">
-        <div class="panel-title-group">
-          <h3 id="panel-model-name">Model Details</h3>
-          <span class="badge badge-neutral" id="panel-model-status" style="margin-top: 4px;">Unloaded</span>
-        </div>
-        <button class="panel-close-btn" id="btn-close-panel">×</button>
+        <span class="panel-title" id="panelModelName">Model Details</span>
+        <button class="btn btn-sm" id="btnClosePanel">✕</button>
       </div>
-
       <div class="panel-tabs">
-        <div class="panel-tab active" data-ptab="overview">Overview</div>
+        <div class="panel-tab active" data-ptab="details">Details</div>
         <div class="panel-tab" data-ptab="activity">Activity</div>
-        <div class="panel-tab" data-ptab="manifest">Manifest</div>
       </div>
+      <div class="panel-body">
+        <div id="panelTabDetails">
+          <div class="detail-group">
+            <div class="detail-label">Status</div>
+            <div id="panelStatusBadge"><span class="badge badge-secondary">UNLOADED</span></div>
+          </div>
+          <div class="detail-group">
+            <div class="detail-label">Version</div>
+            <div class="detail-value" id="panelVersion">-</div>
+          </div>
+          <div class="detail-group">
+            <div class="detail-label">Quantization</div>
+            <div class="detail-value" id="panelQuant">-</div>
+          </div>
+          <div class="detail-group">
+            <div class="detail-label">Size</div>
+            <div class="detail-value" id="panelSize">-</div>
+          </div>
+          <div class="detail-group">
+            <div class="detail-label">SHA256 Checksum</div>
+            <div class="detail-value code" id="panelSha256">-</div>
+          </div>
 
-      <div class="panel-body" id="panel-body-overview">
-        <div class="detail-row">
-          <span class="detail-label">Version</span>
-          <span class="detail-val" id="panel-val-version">-</span>
+          <div style="margin-top: 24px; display: flex; flex-direction: column; gap: 8px;">
+            <button class="btn btn-primary" id="btnPanelLoadUnload">Load Model</button>
+            <button class="btn" id="btnPanelShowManifest">Show Manifest JSON</button>
+            <button class="btn" id="btnPanelCopyName">Copy Model Name</button>
+          </div>
         </div>
-        <div class="detail-row">
-          <span class="detail-label">Quantization</span>
-          <span class="detail-val" id="panel-val-quant">-</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Size</span>
-          <span class="detail-val" id="panel-val-size">-</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Architecture</span>
-          <span class="detail-val" id="panel-val-arch">-</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Pulled At</span>
-          <span class="detail-val" id="panel-val-pulled">-</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">SHA256 Checksum</span>
-          <span class="detail-val" id="panel-val-checksum" style="font-family: var(--font-mono); font-size: 11px;">-</span>
-        </div>
-      </div>
 
-      <div class="panel-body" id="panel-body-activity" style="display: none;">
-        <div class="activity-feed" id="panel-activity-feed">
-          <div style="color: var(--text-muted); font-size: 12px;">No recent request activity logged for this model.</div>
+        <div id="panelTabActivity" style="display: none;">
+          <div class="detail-label">Recent Model Requests</div>
+          <div id="panelActivityFeed" style="font-size: 12px; color: var(--text-muted); margin-top: 10px;">
+            No recent activity logged for this model.
+          </div>
         </div>
-      </div>
-
-      <div class="panel-body" id="panel-body-manifest" style="display: none;">
-        <pre id="panel-manifest-json" style="font-family: var(--font-mono); font-size: 11px; white-space: pre-wrap; word-break: break-all; background: var(--bg-app); padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);"></pre>
-      </div>
-
-      <div class="panel-footer">
-        <button class="btn btn-primary" id="btn-panel-action-load" style="flex: 1;">Load Model</button>
-        <button class="btn btn-secondary" id="btn-panel-copy-name">Copy Name</button>
       </div>
     </aside>
 
+  </div>
+
+  <!-- Add Model Modal -->
+  <div class="modal-overlay hidden" id="addModelModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 style="font-size: 1.15rem; font-weight: 700;">Add / Pull Model</h3>
+        <button class="btn btn-sm" id="btnCloseAddModel">✕</button>
+      </div>
+      <form id="formAddModel">
+        <div class="form-group">
+          <label class="form-label">Model Identifier / Repository</label>
+          <input type="text" class="form-control" id="inputModelName" placeholder="e.g. Qwen/Qwen2.5-0.5B-Instruct" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Source</label>
+          <select class="select-input" id="selectSource" style="width: 100%;">
+            <option value="hf">Hugging Face Hub (hf)</option>
+            <option value="local">Local Directory Path (local)</option>
+            <option value="registry">Apah Registry (registry)</option>
+          </select>
+        </div>
+        <div class="form-group" id="groupLocalPath" style="display: none;">
+          <label class="form-label">Local Path</label>
+          <input type="text" class="form-control" id="inputLocalPath" placeholder="/path/to/local/model">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Revision / Branch</label>
+          <input type="text" class="form-control" id="inputRevision" value="main">
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn" id="btnCancelAddModel">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btnSubmitPull">Pull Model</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Manifest JSON Modal -->
+  <div class="modal-overlay hidden" id="manifestModal">
+    <div class="modal" style="max-width: 650px;">
+      <div class="modal-header">
+        <h3 style="font-size: 1.15rem; font-weight: 700;" id="manifestModalTitle">Model Manifest</h3>
+        <button class="btn btn-sm" id="btnCloseManifest">✕</button>
+      </div>
+      <pre style="font-family: var(--font-mono); font-size: 12px; background: #0f172a; color: #e2e8f0; padding: 16px; border-radius: 6px; max-height: 400px; overflow-y: auto;" id="manifestJsonContent"></pre>
+    </div>
   </div>
 
 </body>

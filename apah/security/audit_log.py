@@ -48,6 +48,16 @@ class AuditLogger:
         self._writer_task: Optional[asyncio.Task] = None
         self._is_running: bool = False
 
+    @property
+    def log_path(self) -> Path:
+        """Return active audit log file path."""
+        return self._get_current_log_file()
+
+    @property
+    def log_file(self) -> Path:
+        """Return active audit log file path (alias)."""
+        return self._get_current_log_file()
+
     def _get_current_log_file(self) -> Path:
         today_str = datetime.now(timezone.utc).strftime("%Y%m%d")
         return self.log_dir / f"apah_audit_{today_str}.jsonl"

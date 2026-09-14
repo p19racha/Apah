@@ -1,1 +1,1 @@
-"""Apah desktop tray app package."""
+"""Apah desktop app package."""

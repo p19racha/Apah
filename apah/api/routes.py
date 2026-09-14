@@ -109,22 +109,6 @@ async def health():
     return {"status": "ok"}
 
 
-@router.get("/models", summary="List local model manifests")
-async def get_models():
-    """List all locally downloaded model manifests in ~/.apah/models/."""
-    from apah.registry.manifest import get_default_models_dir, list_versions
-    
-    models_dir = get_default_models_dir()
-    all_manifests = []
-    if models_dir.exists():
-        for p in models_dir.iterdir():
-            if p.is_dir():
-                manifests = list_versions(p.name, models_root=models_dir)
-                all_manifests.extend(manifests)
-    return [m.model_dump() for m in all_manifests]
-
-
-
 
 @router.get("/gpu", response_model=List[GPUStatsResponse], summary="Get real-time NVML hardware stats for visible GPUs")
 async def get_gpu_stats():
@@ -269,6 +253,149 @@ async def unload_model_endpoint():
         details={"model_name": model_name, "freed_memory_mb": round(freed_mb, 2)},
     )
     return {"status": "success", "message": f"Model '{model_name}' unloaded. Freed {freed_mb:.2f} MB GPU memory."}
+
+
+@router.get("/models", summary="List all downloaded model manifests")
+@router.get("/v1/models", summary="List all downloaded model manifests (OpenAI alias)")
+async def list_models_endpoint():
+    """List local model manifests across all versions in ~/.apah/models/."""
+    from pathlib import Path
+    from apah.registry.manifest import get_default_models_dir, list_versions
+
+    models_dir = get_default_models_dir()
+    all_manifests = []
+
+    if models_dir.exists():
+        for p in models_dir.iterdir():
+            if p.is_dir():
+                manifests = list_versions(p.name, models_root=models_dir)
+                all_manifests.extend(manifests)
+
+    # Sort manifests by pulled_at descending
+    all_manifests.sort(key=lambda m: m.pulled_at, reverse=True)
+    return [m.model_dump() for m in all_manifests]
+
+
+@router.post("/pull", summary="Pull model weights and generate manifest")
+async def pull_model_endpoint(payload: dict):
+    """Pull model weights (HF, local, or registry) and generate manifest."""
+    from pathlib import Path
+    import shutil
+    from apah.registry.checksum import compute_composite_checksum, compute_manifest_checksums, verify_manifest
+    from apah.registry.manifest import ModelManifest, get_model_dir, parse_model_identifier
+    from apah.registry.quant_detect import detect_quant_format
+    from apah.security.network_guard import check_airgap_pull_source, is_airgap_enabled
+
+    model_id = payload.get("model", "").strip()
+    source = payload.get("source", "hf").strip()
+    local_path = payload.get("local_path")
+    revision = payload.get("revision", "main").strip()
+
+    if not model_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing required 'model' parameter.")
+
+    try:
+        check_airgap_pull_source(source)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Airgap Violation: {str(e)}")
+
+    clean_name, version = parse_model_identifier(model_id)
+    target_version = version or "v1.0.0"
+    target_dir = get_model_dir(clean_name, version=target_version)
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        if source == "local" and local_path:
+            src_path = Path(local_path)
+            if not src_path.exists():
+                raise HTTPException(status_code=400, detail=f"Local path '{local_path}' does not exist.")
+            for item in src_path.iterdir():
+                dest = target_dir / item.name
+                if item.is_dir():
+                    shutil.copytree(item, dest, dirs_exist_ok=True)
+                else:
+                    shutil.copy2(item, dest)
+
+        elif source == "hf":
+            try:
+                from huggingface_hub import snapshot_download
+                snapshot_download(repo_id=clean_name, local_dir=str(target_dir), revision=revision)
+            except ImportError:
+                logger.warning("huggingface_hub not installed. Created target directory.")
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"HuggingFace pull failed: {str(e)}")
+
+        checksum_per_file = compute_manifest_checksums(target_dir)
+        composite_sha256 = compute_composite_checksum(checksum_per_file)
+        quant_format = detect_quant_format(target_dir)
+        total_size = sum((target_dir / fname).stat().st_size for fname in checksum_per_file if (target_dir / fname).exists())
+
+        manifest = ModelManifest(
+            name=clean_name,
+            version=target_version,
+            source=source,
+            revision=revision,
+            size_bytes=total_size,
+            quant=quant_format.value,
+            architecture="unknown",
+            checksum_sha256=composite_sha256,
+            checksum_per_file=checksum_per_file,
+        )
+
+        manifest_file = target_dir / "apah_manifest.json"
+        with open(manifest_file, "w") as f:
+            f.write(manifest.model_dump_json(indent=2))
+
+        verification = verify_manifest(target_dir, manifest)
+        if not verification.ok:
+            raise HTTPException(status_code=400, detail=f"Checksum verification failed: {verification.error_message}")
+
+        server_state.audit_logger.log_event("model_pull", details={"model": clean_name, "version": target_version, "source": source})
+        return {"status": "success", "manifest": manifest.model_dump()}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error pulling model '{model_id}': {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to pull model: {str(e)}")
+
+
+@router.get("/config", summary="Get current server and security configuration")
+async def get_config_endpoint():
+    """Get current idle timeout, airgap mode status, and version info."""
+    from apah.security.network_guard import is_airgap_enabled
+    from apah.security.sandbox import get_path_guard
+
+    return {
+        "idle_timeout_seconds": server_state.idle_manager.idle_timeout_seconds,
+        "auto_unload_enabled": server_state.idle_manager.enabled,
+        "airgap_mode_enabled": is_airgap_enabled(),
+        "audit_log_content": server_state.audit_logger.log_content,
+        "audit_log_path": str(server_state.audit_logger.log_path),
+        "version": "0.5.0",
+        "allowed_sandbox_paths": [str(p) for p in get_path_guard().allowed_paths],
+    }
+
+
+@router.post("/config", summary="Update configurable server settings")
+async def update_config_endpoint(payload: dict):
+    """Update idle timeout and auto-unload settings."""
+    if "idle_timeout_seconds" in payload:
+        try:
+            val = int(payload["idle_timeout_seconds"])
+            if val > 0:
+                server_state.idle_manager.idle_timeout_seconds = val
+        except ValueError:
+            raise HTTPException(status_code=400, detail="idle_timeout_seconds must be a positive integer.")
+
+    if "auto_unload_enabled" in payload:
+        server_state.idle_manager.enabled = bool(payload["auto_unload_enabled"])
+
+    return {
+        "status": "success",
+        "idle_timeout_seconds": server_state.idle_manager.idle_timeout_seconds,
+        "auto_unload_enabled": server_state.idle_manager.enabled,
+    }
+
 
 
 @router.post("/v1/chat/completions", summary="OpenAI-compatible chat completions endpoint")

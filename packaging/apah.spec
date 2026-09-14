@@ -7,6 +7,7 @@ from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 block_cipher = None
 
+# Base path setup
 repo_dir = Path(os.getcwd())
 frontend_dir = repo_dir / "apah" / "dashboard" / "frontend"
 
@@ -70,4 +71,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon='apah/dashboard/frontend/assets/apah-logo.svg',
 )

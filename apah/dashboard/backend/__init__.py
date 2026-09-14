@@ -1,1 +1,1 @@
-"""Apah dashboard backend package."""
+"""Dashboard backend routes and static file handlers."""

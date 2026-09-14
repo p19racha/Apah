@@ -1,413 +1,497 @@
-/* Apah Control Dashboard Frontend Application Logic */
+/* Apah Sovereign AI Control Dashboard JavaScript — App Logic */
 
 document.addEventListener('DOMContentLoaded', () => {
-  // State variables
-  let allModels = [];
-  let loadedModelName = null;
-  let selectedModel = null;
-  let wsStats = null;
-  let wsLogs = null;
-  let auditLogsHistory = [];
+  // Global State
+  let state = {
+    models: [],
+    loadedModelStatus: null,
+    gpuStats: [],
+    selectedModel: null,
+    logStreamPaused: false,
+    logEntries: [],
+    wsLogs: null,
+    wsStats: null,
+  };
 
   // DOM Elements
   const navItems = document.querySelectorAll('.nav-item');
   const viewSections = document.querySelectorAll('.view-section');
-  const detailPanel = document.getElementById('detail-panel');
-  const btnClosePanel = document.getElementById('btn-close-panel');
-  const btnRefreshAll = document.getElementById('btn-refresh-all');
+  const detailPanel = document.getElementById('detailPanel');
+  const btnClosePanel = document.getElementById('btnClosePanel');
+  const panelTabs = document.querySelectorAll('.panel-tab');
 
-  // Navigation View Switching
+  // Modals
+  const addModelModal = document.getElementById('addModelModal');
+  const manifestModal = document.getElementById('manifestModal');
+  const btnOpenAddModel = document.getElementById('btnOpenAddModel');
+  const btnOpenAddModel2 = document.getElementById('btnOpenAddModel2');
+  const btnCloseAddModel = document.getElementById('btnCloseAddModel');
+  const btnCancelAddModel = document.getElementById('btnCancelAddModel');
+  const formAddModel = document.getElementById('formAddModel');
+  const selectSource = document.getElementById('selectSource');
+  const groupLocalPath = document.getElementById('groupLocalPath');
+
+  // Navigation Setup
   navItems.forEach(item => {
     item.addEventListener('click', () => {
       const targetView = item.getAttribute('data-view');
-      navItems.forEach(i => i.classList.remove('active'));
+      navItems.forEach(n => n.classList.remove('active'));
       item.classList.add('active');
 
       viewSections.forEach(sec => {
-        if (sec.id === `view-${targetView}`) {
-          sec.classList.add('active');
-        } else {
-          sec.classList.remove('active');
-        }
+        sec.style.display = sec.id === `view-${targetView}` ? 'block' : 'none';
       });
     });
   });
 
-  // Close Detail Panel
-  if (btnClosePanel) {
-    btnClosePanel.addEventListener('click', () => {
-      detailPanel.classList.remove('open');
-      document.querySelectorAll('#models-tbody tr').forEach(r => r.classList.remove('selected'));
-    });
-  }
-
-  // Panel Tabs Switching
-  const panelTabs = document.querySelectorAll('.panel-tab');
+  // Panel Tabs Setup
   panelTabs.forEach(tab => {
     tab.addEventListener('click', () => {
-      const ptab = tab.getAttribute('data-ptab');
+      const targetPtab = tab.getAttribute('data-ptab');
       panelTabs.forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
 
-      document.getElementById('panel-body-overview').style.display = ptab === 'overview' ? 'flex' : 'none';
-      document.getElementById('panel-body-activity').style.display = ptab === 'activity' ? 'flex' : 'none';
-      document.getElementById('panel-body-manifest').style.display = ptab === 'manifest' ? 'block' : 'none';
+      document.getElementById('panelTabDetails').style.display = targetPtab === 'details' ? 'block' : 'none';
+      document.getElementById('panelTabActivity').style.display = targetPtab === 'activity' ? 'block' : 'none';
     });
   });
 
-  // Helper: Format Bytes to Human Size
+  btnClosePanel.addEventListener('click', () => {
+    detailPanel.classList.add('hidden');
+    document.querySelectorAll('#modelsTableBody tr').forEach(r => r.classList.remove('selected'));
+  });
+
+  // Modal Open/Close handlers
+  const openAddModelModal = () => addModelModal.classList.remove('hidden');
+  const closeAddModelModal = () => addModelModal.classList.add('hidden');
+  btnOpenAddModel?.addEventListener('click', openAddModelModal);
+  btnOpenAddModel2?.addEventListener('click', openAddModelModal);
+  btnCloseAddModel?.addEventListener('click', closeAddModelModal);
+  btnCancelAddModel?.addEventListener('click', closeAddModelModal);
+
+  selectSource.addEventListener('change', () => {
+    groupLocalPath.style.display = selectSource.value === 'local' ? 'block' : 'none';
+  });
+
+  document.getElementById('btnCloseManifest')?.addEventListener('click', () => {
+    manifestModal.classList.add('hidden');
+  });
+
+  // Helper formatting
   function formatBytes(bytes) {
-    if (!bytes || bytes === 0) return '0.0 B';
+    if (!bytes || bytes === 0) return '0 B';
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 
-  // Fetch Models Manifest List
-  async function fetchModels() {
+  function formatDate(isoStr) {
+    if (!isoStr) return '-';
     try {
-      const res = await fetch('/models');
-      if (res.ok) {
-        allModels = await res.json();
-        renderModelsTable(allModels);
-        updateModelsSummaryCards(allModels);
-      }
+      const d = new Date(isoStr);
+      return d.toLocaleString();
     } catch (e) {
-      console.warn('Error fetching /models:', e);
+      return isoStr;
     }
   }
 
-  // Fetch Loaded Process Status (/ps)
-  async function fetchProcessStatus() {
+  // Data Fetching: Models & Process Status
+  async function loadModelsData() {
     try {
-      const res = await fetch('/ps');
-      if (res.ok) {
-        const psList = await res.json();
-        if (psList && psList.length > 0) {
-          loadedModelName = psList[0].name;
-          document.getElementById('card-active-model-name').textContent = loadedModelName;
-          document.getElementById('card-active-model-sub').textContent = `GPU VRAM: ${psList[0].gpu_memory_mb.toFixed(1)} MB | Uptime: ${Math.round(psList[0].uptime_seconds)}s`;
-        } else {
-          loadedModelName = null;
-          document.getElementById('card-active-model-name').textContent = 'None';
-          document.getElementById('card-active-model-sub').textContent = 'GPU VRAM: 0.0 MB';
-        }
-        renderModelsTable(allModels);
-      }
-    } catch (e) {
-      console.warn('Error fetching /ps:', e);
+      const [modelsResp, psResp] = await Promise.all([
+        fetch('/models').then(r => r.ok ? r.json() : []),
+        fetch('/ps').then(r => r.ok ? r.json() : []),
+      ]);
+
+      state.models = modelsResp;
+      state.loadedModelStatus = psResp.length > 0 ? psResp[0] : null;
+
+      renderModelsView();
+    } catch (err) {
+      console.error('Error fetching models:', err);
     }
   }
 
-  // Render Models Table
-  function renderModelsTable(models) {
-    const tbody = document.getElementById('models-tbody');
-    const countLabel = document.getElementById('models-table-count');
-    if (!tbody) return;
+  function renderModelsView() {
+    const tbody = document.getElementById('modelsTableBody');
+    const tableCount = document.getElementById('modelsTableCount');
+    const activeModelVal = document.getElementById('activeModelVal');
+    const activeModelSub = document.getElementById('activeModelSub');
+    const totalModelsVal = document.getElementById('totalModelsVal');
+    const totalSizeSub = document.getElementById('totalSizeSub');
 
-    if (countLabel) countLabel.textContent = `${models.length} models registered`;
+    totalModelsVal.textContent = state.models.length;
+    tableCount.textContent = `${state.models.length} models`;
 
-    if (!models || models.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">
-            No model manifests found in ~/.apah/models/. Pull models using 'apah pull'.
-          </td>
-        </tr>
-      `;
+    const totalBytes = state.models.reduce((sum, m) => sum + (m.size_bytes || 0), 0);
+    totalSizeSub.textContent = `Total Size: ${formatBytes(totalBytes)}`;
+
+    if (state.loadedModelStatus && state.loadedModelStatus.loaded) {
+      activeModelVal.textContent = state.loadedModelStatus.name;
+      activeModelSub.textContent = `${state.loadedModelStatus.gpu_memory_mb.toFixed(1)} MB GPU VRAM • Uptime ${state.loadedModelStatus.uptime_seconds.toFixed(0)}s`;
+    } else {
+      activeModelVal.textContent = 'None Loaded';
+      activeModelSub.textContent = '0 MB GPU VRAM';
+    }
+
+    if (state.models.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 24px;">No local models found in ~/.apah/models/. Use "+ Add Model" to pull one.</td></tr>`;
       return;
     }
 
-    tbody.innerHTML = '';
-    models.forEach(m => {
-      const isLoaded = loadedModelName && (loadedModelName === m.name || loadedModelName.includes(m.name));
-      const tr = document.createElement('tr');
-      if (selectedModel && selectedModel.name === m.name) tr.classList.add('selected');
+    const searchTerm = document.getElementById('searchModels').value.toLowerCase();
+    const filteredModels = state.models.filter(m => 
+      m.name.toLowerCase().includes(searchTerm) || (m.quant && m.quant.toLowerCase().includes(searchTerm))
+    );
 
-      const statusBadge = isLoaded
-        ? '<span class="badge badge-success">Loaded</span>'
-        : '<span class="badge badge-neutral">Unloaded</span>';
+    tbody.innerHTML = filteredModels.map(m => {
+      const isLoaded = state.loadedModelStatus && (state.loadedModelStatus.name === m.name || state.loadedModelStatus.name === `${m.name}:${m.version}`);
+      const statusBadge = isLoaded 
+        ? `<span class="badge badge-success">Loaded</span>` 
+        : `<span class="badge badge-secondary">Unloaded</span>`;
 
-      const pulledDate = m.pulled_at ? new Date(m.pulled_at).toLocaleDateString() : '-';
-
-      tr.innerHTML = `
-        <td><strong style="color: var(--text-main);">${m.name}</strong></td>
-        <td><code style="font-size: 11.5px; color: var(--text-muted);">${m.version || 'v1.0.0'}</code></td>
-        <td><span class="badge badge-info">${m.quant || 'none'}</span></td>
-        <td>${formatBytes(m.size_bytes)}</td>
-        <td>${statusBadge}</td>
-        <td style="color: var(--text-muted);">${pulledDate}</td>
-        <td><button class="btn btn-secondary" style="padding: 3px 8px; font-size: 11px;">Details</button></td>
+      return `
+        <tr data-model-name="${m.name}" data-version="${m.version}">
+          <td><strong>${m.name}</strong></td>
+          <td>${m.version || 'v1.0.0'}</td>
+          <td>${m.quant || 'none'}</td>
+          <td>${formatBytes(m.size_bytes)}</td>
+          <td>${statusBadge}</td>
+          <td>${formatDate(m.pulled_at)}</td>
+          <td><button class="btn btn-sm btn-select-row">Details</button></td>
+        </tr>
       `;
+    }).join('');
 
-      tr.addEventListener('click', () => {
-        document.querySelectorAll('#models-tbody tr').forEach(r => r.classList.remove('selected'));
-        tr.classList.add('selected');
-        openModelDetailPanel(m, isLoaded);
+    // Attach row click events
+    tbody.querySelectorAll('tr').forEach(row => {
+      row.addEventListener('click', () => {
+        const name = row.getAttribute('data-model-name');
+        const ver = row.getAttribute('data-version');
+        const modelObj = state.models.find(m => m.name === name && m.version === ver);
+        if (modelObj) {
+          selectModelRow(modelObj, row);
+        }
       });
-
-      tbody.appendChild(tr);
     });
   }
 
-  // Update Summary Cards
-  function updateModelsSummaryCards(models) {
-    document.getElementById('card-total-models-count').textContent = models.length;
-    const totalBytes = models.reduce((acc, m) => acc + (m.size_bytes || 0), 0);
-    document.getElementById('card-total-size-text').textContent = `Total size: ${formatBytes(totalBytes)}`;
-  }
+  function selectModelRow(modelObj, rowElement) {
+    state.selectedModel = modelObj;
+    document.querySelectorAll('#modelsTableBody tr').forEach(r => r.classList.remove('selected'));
+    if (rowElement) rowElement.classList.add('selected');
 
-  // Open Model Detail Panel
-  function openModelDetailPanel(model, isLoaded) {
-    selectedModel = model;
-    document.getElementById('panel-model-name').textContent = model.name;
+    // Populate Right Panel
+    document.getElementById('panelModelName').textContent = modelObj.name;
+    document.getElementById('panelVersion').textContent = modelObj.version || 'v1.0.0';
+    document.getElementById('panelQuant').textContent = modelObj.quant || 'none';
+    document.getElementById('panelSize').textContent = formatBytes(modelObj.size_bytes);
+    document.getElementById('panelSha256').textContent = modelObj.checksum_sha256 ? modelObj.checksum_sha256.substring(0, 16) + '...' : '-';
 
-    const statusEl = document.getElementById('panel-model-status');
+    const isLoaded = state.loadedModelStatus && (state.loadedModelStatus.name === modelObj.name || state.loadedModelStatus.name === `${modelObj.name}:${modelObj.version}`);
+    const badgeContainer = document.getElementById('panelStatusBadge');
+    const loadBtn = document.getElementById('btnPanelLoadUnload');
+
     if (isLoaded) {
-      statusEl.textContent = 'Loaded';
-      statusEl.className = 'badge badge-success';
+      badgeContainer.innerHTML = `<span class="badge badge-success">LOADED</span>`;
+      loadBtn.textContent = 'Unload Model';
+      loadBtn.className = 'btn btn-danger';
     } else {
-      statusEl.textContent = 'Unloaded';
-      statusEl.className = 'badge badge-neutral';
+      badgeContainer.innerHTML = `<span class="badge badge-secondary">UNLOADED</span>`;
+      loadBtn.textContent = 'Load Model';
+      loadBtn.className = 'btn btn-primary';
     }
 
-    document.getElementById('panel-val-version').textContent = model.version || 'v1.0.0';
-    document.getElementById('panel-val-quant').textContent = model.quant || 'none';
-    document.getElementById('panel-val-size').textContent = formatBytes(model.size_bytes);
-    document.getElementById('panel-val-arch').textContent = model.architecture || 'unknown';
-    document.getElementById('panel-val-pulled').textContent = model.pulled_at || '-';
-    document.getElementById('panel-val-checksum').textContent = model.checksum_sha256 ? model.checksum_sha256.substring(0, 16) + '...' : '-';
+    detailPanel.classList.remove('hidden');
+  }
 
-    document.getElementById('panel-manifest-json').textContent = JSON.stringify(model, null, 2);
+  // Model Actions: Load / Unload / Manifest / Copy
+  document.getElementById('btnPanelLoadUnload').addEventListener('click', async () => {
+    if (!state.selectedModel) return;
+    const isLoaded = state.loadedModelStatus && (state.loadedModelStatus.name === state.selectedModel.name || state.loadedModelStatus.name === `${state.selectedModel.name}:${state.selectedModel.version}`);
 
-    const btnLoad = document.getElementById('btn-panel-action-load');
     if (isLoaded) {
-      btnLoad.textContent = 'Unload Model';
-      btnLoad.className = 'btn btn-danger';
-      btnLoad.onclick = () => unloadModel();
+      // Unload
+      try {
+        const res = await fetch('/unload', { method: 'POST' }).then(r => r.json());
+        alert(res.message || 'Model unloaded.');
+        await loadModelsData();
+        if (state.selectedModel) selectModelRow(state.selectedModel, null);
+      } catch (err) {
+        alert('Failed to unload model: ' + err.message);
+      }
     } else {
-      btnLoad.textContent = 'Load Model';
-      btnLoad.className = 'btn btn-primary';
-      btnLoad.onclick = () => loadModel(model.name);
-    }
+      // Load
+      try {
+        const payload = { model_path: state.selectedModel.name };
+        const res = await fetch('/load', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).then(r => r.json());
 
-    // Filter mini activity feed
-    updatePanelActivityFeed(model.name);
-
-    detailPanel.classList.add('open');
-  }
-
-  // Action: Load Model
-  async function loadModel(modelName) {
-    try {
-      const res = await fetch('/load', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model_path: modelName })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        alert(`Success: ${data.message || 'Model loaded.'}`);
-        fetchProcessStatus();
-      } else {
-        alert(`Error: ${data.error || 'Failed to load model.'}`);
+        if (res.error) {
+          alert('Load failed: ' + (res.error.message || res.error));
+        } else {
+          alert(res.message || 'Model loaded successfully.');
+          await loadModelsData();
+          if (state.selectedModel) selectModelRow(state.selectedModel, null);
+        }
+      } catch (err) {
+        alert('Failed to load model: ' + err.message);
       }
-    } catch (e) {
-      alert(`Error calling /load: ${e}`);
-    }
-  }
-
-  // Action: Unload Model
-  async function unloadModel() {
-    try {
-      const res = await fetch('/unload', { method: 'POST' });
-      const data = await res.json();
-      if (res.ok) {
-        alert(`Success: ${data.message || 'Model unloaded.'}`);
-        fetchProcessStatus();
-      } else {
-        alert(`Error: ${data.error || 'Failed to unload model.'}`);
-      }
-    } catch (e) {
-      alert(`Error calling /unload: ${e}`);
-    }
-  }
-
-  // Copy Model Name
-  document.getElementById('btn-panel-copy-name').addEventListener('click', () => {
-    if (selectedModel) {
-      navigator.clipboard.writeText(selectedModel.name);
-      alert(`Copied "${selectedModel.name}" to clipboard.`);
     }
   });
 
-  // WebSocket 1: Stats (/ws/stats)
-  function connectWebSocketStats() {
-    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${location.host}/ws/stats`;
-    wsStats = new WebSocket(wsUrl);
+  document.getElementById('btnPanelShowManifest').addEventListener('click', () => {
+    if (!state.selectedModel) return;
+    document.getElementById('manifestModalTitle').textContent = `Manifest: ${state.selectedModel.name}`;
+    document.getElementById('manifestJsonContent').textContent = JSON.stringify(state.selectedModel, null, 2);
+    manifestModal.classList.remove('hidden');
+  });
 
-    wsStats.onmessage = (event) => {
+  document.getElementById('btnPanelCopyName').addEventListener('click', () => {
+    if (!state.selectedModel) return;
+    navigator.clipboard.writeText(state.selectedModel.name);
+    alert(`Copied model name '${state.selectedModel.name}' to clipboard!`);
+  });
+
+  // Add / Pull Model Form Submission
+  formAddModel.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const modelName = document.getElementById('inputModelName').value.trim();
+    const source = selectSource.value;
+    const localPath = document.getElementById('inputLocalPath').value.trim();
+    const revision = document.getElementById('inputRevision').value.trim();
+
+    const btnSubmit = document.getElementById('btnSubmitPull');
+    btnSubmit.disabled = true;
+    btnSubmit.textContent = 'Pulling...';
+
+    try {
+      const payload = {
+        model: modelName,
+        source: source,
+        local_path: localPath || null,
+        revision: revision || 'main'
+      };
+
+      const res = await fetch('/pull', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).then(r => r.json());
+
+      if (res.detail) {
+        alert('Pull error: ' + res.detail);
+      } else {
+        alert(`Successfully pulled '${modelName}'!`);
+        closeAddModelModal();
+        await loadModelsData();
+      }
+    } catch (err) {
+      alert('Error during pull: ' + err.message);
+    } finally {
+      btnSubmit.disabled = false;
+      btnSubmit.textContent = 'Pull Model';
+    }
+  });
+
+  // Settings View: Fetch & Save Config
+  async function loadConfigData() {
+    try {
+      const cfg = await fetch('/config').then(r => r.json());
+      document.getElementById('settingIdleTimeout').value = cfg.idle_timeout_seconds;
+      document.getElementById('settingAutoUnload').checked = cfg.auto_unload_enabled;
+
+      const airgapBadge = document.getElementById('cfgAirgapStatus');
+      airgapBadge.innerHTML = cfg.airgap_mode_enabled 
+        ? `<span class="badge badge-success">ENABLED (Socket Isolation)</span>` 
+        : `<span class="badge badge-secondary">DISABLED</span>`;
+
+      document.getElementById('cfgAuditContent').textContent = cfg.audit_log_content ? 'Full Content' : 'Metadata Only';
+      document.getElementById('cfgAuditPath').textContent = cfg.audit_log_path;
+    } catch (err) {
+      console.error('Error fetching config:', err);
+    }
+  }
+
+  document.getElementById('btnSaveConfig').addEventListener('click', async () => {
+    const idleVal = parseInt(document.getElementById('settingIdleTimeout').value, 10);
+    const autoVal = document.getElementById('settingAutoUnload').checked;
+
+    try {
+      const res = await fetch('/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          idle_timeout_seconds: idleVal,
+          auto_unload_enabled: autoVal
+        })
+      }).then(r => r.json());
+
+      const statusEl = document.getElementById('configSavedStatus');
+      statusEl.textContent = 'Settings saved successfully!';
+      setTimeout(() => { statusEl.textContent = ''; }, 3000);
+    } catch (err) {
+      alert('Failed to save config: ' + err.message);
+    }
+  });
+
+  // Search Filter Handler
+  document.getElementById('searchModels').addEventListener('input', renderModelsView);
+
+  // WebSockets Setup: /ws/logs and /ws/stats
+  function connectLogsWebSocket() {
+    const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${location.host}/ws/logs`;
+
+    state.wsLogs = new WebSocket(wsUrl);
+    const logContainer = document.getElementById('logContainer');
+    const countBadge = document.getElementById('logCountBadge');
+
+    state.wsLogs.onopen = () => {
+      console.log('Connected to /ws/logs');
+    };
+
+    state.wsLogs.onmessage = (event) => {
+      if (state.logStreamPaused) return;
+
+      const rawLine = event.data;
+      state.logEntries.push(rawLine);
+      countBadge.textContent = `${state.logEntries.length} events`;
+
+      renderLogs();
+    };
+
+    state.wsLogs.onclose = () => {
+      console.warn('WebSocket /ws/logs closed. Reconnecting in 2s...');
+      setTimeout(connectLogsWebSocket, 2000);
+    };
+  }
+
+  function renderLogs() {
+    const logContainer = document.getElementById('logContainer');
+    const filterType = document.getElementById('logTypeFilter').value;
+    const filterSearch = document.getElementById('logSearch').value.toLowerCase();
+
+    const filtered = state.logEntries.filter(line => {
+      if (filterType !== 'ALL' && !line.includes(`"event_type": "${filterType}"`)) return false;
+      if (filterSearch && !line.toLowerCase().includes(filterSearch)) return false;
+      return true;
+    });
+
+    logContainer.textContent = filtered.join('\n');
+    logContainer.scrollTop = logContainer.scrollHeight;
+  }
+
+  document.getElementById('logTypeFilter').addEventListener('change', renderLogs);
+  document.getElementById('logSearch').addEventListener('input', renderLogs);
+  document.getElementById('btnClearLogs').addEventListener('click', () => {
+    state.logEntries = [];
+    document.getElementById('logCountBadge').textContent = '0 events';
+    document.getElementById('logContainer').textContent = '';
+  });
+
+  document.getElementById('btnToggleLogPause').addEventListener('click', function() {
+    state.logStreamPaused = !state.logStreamPaused;
+    this.textContent = state.logStreamPaused ? 'Resume Stream' : 'Pause Stream';
+  });
+
+  function connectStatsWebSocket() {
+    const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${location.host}/ws/stats`;
+
+    state.wsStats = new WebSocket(wsUrl);
+
+    state.wsStats.onopen = () => {
+      document.getElementById('serverStatusDot').className = 'status-dot';
+      document.getElementById('serverStatusText').textContent = 'Server Online';
+    };
+
+    state.wsStats.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        renderStats(data);
-      } catch (e) {
-        console.warn('Invalid stats JSON:', e);
+        updateTelemetryUI(data);
+      } catch (err) {
+        console.error('Error parsing stats JSON:', err);
       }
     };
 
-    wsStats.onclose = () => {
-      setTimeout(connectWebSocketStats, 2000);
-    };
-  }
-
-  function renderStats(data) {
-    // GPU cards
-    const container = document.getElementById('gpu-cards-container');
-    if (container && data.gpu) {
-      document.getElementById('card-gpu-count-text').textContent = `${data.gpu.length} Visible GPU${data.gpu.length === 1 ? '' : 's'}`;
-      if (data.gpu.length > 0) {
-        document.getElementById('card-gpu-temp-text').textContent = `Temp: ${data.gpu[0].temperature_c}°C | Util: ${data.gpu[0].utilization_pct}%`;
-        
-        // Update sidebar widgets
-        const g0 = data.gpu[0];
-        document.getElementById('widget-vram-text').textContent = `${g0.memory_used_mb.toFixed(0)} / ${g0.memory_total_mb.toFixed(0)} MB`;
-        const vramPct = (g0.memory_used_mb / (g0.memory_total_mb || 1)) * 100;
-        document.getElementById('widget-vram-bar').style.width = `${Math.min(100, vramPct)}%`;
-
-        document.getElementById('widget-gpu-util').textContent = `${g0.utilization_pct}%`;
-        document.getElementById('widget-gpu-bar').style.width = `${Math.min(100, g0.utilization_pct)}%`;
-      }
-
-      container.innerHTML = '';
-      data.gpu.forEach(g => {
-        const div = document.createElement('div');
-        div.className = 'card';
-        div.innerHTML = `
-          <div class="card-header-small">
-            <span>GPU [${g.index}] ${g.name}</span>
-            <span>🌡️ ${g.temperature_c}°C</span>
-          </div>
-          <div class="card-value">${g.utilization_pct}% Util</div>
-          <div class="progress-group" style="margin-top: 8px;">
-            <div class="progress-label">
-              <span>VRAM Usage</span>
-              <span>${g.memory_used_mb.toFixed(0)} / ${g.memory_total_mb.toFixed(0)} MB</span>
-            </div>
-            <div class="progress-bar-bg">
-              <div class="progress-bar-fill" style="width: ${((g.memory_used_mb / (g.memory_total_mb || 1)) * 100).toFixed(1)}%;"></div>
-            </div>
-          </div>
-        `;
-        container.appendChild(div);
-      });
-    }
-
-    // Scheduler stats
-    if (data.scheduler) {
-      document.getElementById('perf-active-batch').textContent = data.scheduler.active_batch_size || 0;
-      document.getElementById('perf-waiting-queue').textContent = data.scheduler.waiting_queue_length || 0;
-      const rate = data.scheduler.aggregate_throughput_tok_s || 0.0;
-      document.getElementById('perf-throughput').textContent = `${rate.toFixed(1)} tok/s`;
-    }
-  }
-
-  // WebSocket 2: Logs (/ws/logs)
-  function connectWebSocketLogs() {
-    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${location.host}/ws/logs`;
-    wsLogs = new WebSocket(wsUrl);
-
-    wsLogs.onopen = () => {
-      const badge = document.getElementById('log-ws-status');
-      if (badge) {
-        badge.textContent = 'Connected';
-        badge.className = 'badge badge-success';
-      }
-    };
-
-    wsLogs.onmessage = (event) => {
-      try {
-        const payload = JSON.parse(event.data);
-        auditLogsHistory.push(payload);
-        appendLogLine(payload);
-        if (selectedModel) updatePanelActivityFeed(selectedModel.name);
-      } catch (e) {
-        // Plain text log fallback
-        appendLogLine({ event_type: 'raw', details: { text: event.data } });
-      }
-    };
-
-    wsLogs.onclose = () => {
-      const badge = document.getElementById('log-ws-status');
-      if (badge) {
-        badge.textContent = 'Reconnecting...';
-        badge.className = 'badge badge-warning';
-      }
-      setTimeout(connectWebSocketLogs, 2000);
+    state.wsStats.onclose = () => {
+      document.getElementById('serverStatusDot').className = 'status-dot offline';
+      document.getElementById('serverStatusText').textContent = 'Disconnected';
+      setTimeout(connectStatsWebSocket, 2000);
     };
   }
 
-  function appendLogLine(logObj) {
-    const term = document.getElementById('log-terminal-container');
-    if (!term) return;
+  function updateTelemetryUI(data) {
+    const server = data.server || {};
+    const gpuList = data.gpu || [];
+    const sched = data.scheduler || {};
 
-    const div = document.createElement('div');
-    div.className = 'log-line';
-
-    const ts = logObj.timestamp ? new Date(logObj.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
-    const eventType = logObj.event_type || 'event';
-    const detailsStr = logObj.details ? JSON.stringify(logObj.details) : '';
-
-    div.innerHTML = `<span class="log-ts">[${ts}]</span> <span class="log-event">${eventType}</span> ${detailsStr}`;
-    term.appendChild(div);
-    term.scrollTop = term.scrollHeight;
-  }
-
-  function updatePanelActivityFeed(modelName) {
-    const feed = document.getElementById('panel-activity-feed');
-    if (!feed) return;
-
-    const matching = auditLogsHistory.filter(l => {
-      const d = l.details || {};
-      return d.model === modelName || d.model_path === modelName || d.model_name === modelName;
+    // Update Topbar & Sidebar VRAM
+    let totalUsedMb = 0;
+    let totalMaxMb = 0;
+    gpuList.forEach(g => {
+      totalUsedMb += (g.memory_used_mb || 0);
+      totalMaxMb += (g.memory_total_mb || 0);
     });
 
-    if (matching.length === 0) {
-      feed.innerHTML = '<div style="color: var(--text-muted); font-size: 12px;">No recent request activity logged for this model.</div>';
-      return;
+    if (totalMaxMb === 0 && server.gpu_memory_mb) {
+      totalUsedMb = server.gpu_memory_mb;
+      totalMaxMb = 24576; // Default fallback estimate if NVML not queried
     }
 
-    feed.innerHTML = '';
-    matching.slice(-5).reverse().forEach(item => {
-      const div = document.createElement('div');
-      div.className = 'feed-item';
-      const ts = item.timestamp ? new Date(item.timestamp).toLocaleTimeString() : '';
-      div.innerHTML = `
-        <div class="feed-item-header">
-          <span>${item.event_type}</span>
-          <span style="color: var(--text-sub);">${ts}</span>
+    document.getElementById('topbarVramText').textContent = `${totalUsedMb.toFixed(0)} / ${totalMaxMb.toFixed(0)} MB`;
+    
+    const pct = totalMaxMb > 0 ? (totalUsedMb / totalMaxMb) * 100 : 0;
+    document.getElementById('sidebarVramBar').style.width = `${pct.toFixed(1)}%`;
+    document.getElementById('sidebarVramVal').textContent = `${(totalUsedMb/1024).toFixed(1)} / ${(totalMaxMb/1024).toFixed(1)} GB (${pct.toFixed(0)}%)`;
+
+    // Telemetry Summary Card
+    const avgUtil = gpuList.length > 0 ? (gpuList.reduce((acc, g) => acc + g.utilization_pct, 0) / gpuList.length) : 0;
+    const avgTemp = gpuList.length > 0 ? (gpuList.reduce((acc, g) => acc + g.temperature_c, 0) / gpuList.length) : 0;
+    document.getElementById('gpuTelemetryVal').textContent = `${avgUtil.toFixed(0)}% Util`;
+    document.getElementById('gpuTempSub').textContent = `${avgTemp.toFixed(0)} °C Avg Temp`;
+
+    // Performance View Cards Grid
+    const gpuGrid = document.getElementById('gpuCardsGrid');
+    if (gpuList.length > 0) {
+      gpuGrid.innerHTML = gpuList.map(g => `
+        <div class="card">
+          <div class="card-label">GPU ${g.index}: ${g.name}</div>
+          <div class="card-value">${g.utilization_pct}% Util</div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: ${((g.memory_used_mb/g.memory_total_mb)*100).toFixed(1)}%;"></div>
+          </div>
+          <div class="card-sub">${g.memory_used_mb.toFixed(0)} / ${g.memory_total_mb.toFixed(0)} MB VRAM • ${g.temperature_c} °C</div>
         </div>
-        <div style="color: var(--text-muted); font-family: var(--font-mono); font-size: 11px; word-break: break-all;">
-          ${JSON.stringify(item.details || {})}
+      `).join('');
+    } else {
+      gpuGrid.innerHTML = `
+        <div class="card">
+          <div class="card-label">GPU Device</div>
+          <div class="card-value">CPU / Virtual Mode</div>
+          <div class="card-sub">No NVML GPU detected</div>
         </div>
       `;
-      feed.appendChild(div);
-    });
+    }
+
+    // Performance Scheduler metrics
+    document.getElementById('perfActiveBatch').textContent = sched.active_batch_size || 0;
+    document.getElementById('perfWaitQueue').textContent = sched.waiting_queue_length || 0;
+    document.getElementById('perfThroughput').textContent = `${(sched.aggregate_throughput_tok_s || 0).toFixed(1)} tok/s`;
+    document.getElementById('perfTotalTokens').textContent = (sched.total_tokens_generated || 0).toLocaleString();
   }
 
-  // Button Refresh
-  if (btnRefreshAll) {
-    btnRefreshAll.addEventListener('click', () => {
-      fetchModels();
-      fetchProcessStatus();
-    });
-  }
+  // Initial Initialization
+  loadModelsData();
+  loadConfigData();
+  connectLogsWebSocket();
+  connectStatsWebSocket();
 
-  // Initial load
-  fetchModels();
-  fetchProcessStatus();
-  connectWebSocketStats();
-  connectWebSocketLogs();
+  // Periodic Refresh
+  setInterval(loadModelsData, 5000);
 });

@@ -24,26 +24,21 @@ async def ws_logs(websocket: WebSocket):
     log_path = server_state.audit_logger.log_path
 
     try:
-        # If log file exists, send initial tail (up to last 50 lines)
-        sent_lines = 0
+        last_size = 0
         if log_path.exists():
             try:
                 with open(log_path, "r", encoding="utf-8") as f:
                     lines = f.readlines()
-                    tail_lines = lines[-50:] if len(lines) > 50 else lines
-                    for line in tail_lines:
+                    last_size = f.tell()
+                    for line in lines[-100:]:
                         line_str = line.strip()
                         if line_str:
                             await websocket.send_text(line_str)
-                            sent_lines += 1
             except Exception as e:
                 logger.warning(f"Error reading initial audit log lines: {e}")
 
-        # Stream new log entries as they are written
-        last_size = log_path.stat().st_size if log_path.exists() else 0
-
         while True:
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.2)
 
             if not log_path.exists():
                 continue
@@ -60,7 +55,6 @@ async def ws_logs(websocket: WebSocket):
                     if line_str:
                         await websocket.send_text(line_str)
             elif current_size < last_size:
-                # Log file truncated or rotated
                 last_size = 0
 
     except WebSocketDisconnect:
@@ -135,10 +129,8 @@ def setup_dashboard_static(app: FastAPI) -> None:
 
     index_html = frontend_dir / "index.html"
 
-    @app.get("/dashboard", response_class=FileResponse, include_in_schema=False)
-    async def dashboard_index():
-        if index_html.exists():
-            return FileResponse(str(index_html), media_type="text/html")
-        return RedirectResponse(url="/dashboard/")
+    @app.get("/dashboard", include_in_schema=False)
+    async def dashboard_redirect():
+        return RedirectResponse(url="/dashboard/", status_code=307)
 
     app.mount("/dashboard", StaticFiles(directory=str(frontend_dir), html=True), name="dashboard_static")

@@ -1,0 +1,12 @@
+[Unit]
+Description=Apah LLM Inference Engine & Dashboard User Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/apah-app --no-browser
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=default.target

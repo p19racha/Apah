@@ -114,8 +114,10 @@ def print_startup_banner(audit_log_content: bool = False) -> None:
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
+    from fastapi.staticfiles import StaticFiles
     from apah.api.routes import router
     from apah.compat.ollama_shim import ollama_router
+    from apah.dashboard.backend.routes import dashboard_router, FRONTEND_DIR
 
     app = FastAPI(
         title="Apah LLM Inference Server",
@@ -125,6 +127,11 @@ def create_app() -> FastAPI:
     )
     app.include_router(router)
     app.include_router(ollama_router)
+    app.include_router(dashboard_router)
+
+    if FRONTEND_DIR.exists():
+        app.mount("/dashboard", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="dashboard")
+
     return app
 
 

@@ -109,6 +109,22 @@ async def health():
     return {"status": "ok"}
 
 
+@router.get("/models", summary="List local model manifests")
+async def get_models():
+    """List all locally downloaded model manifests in ~/.apah/models/."""
+    from apah.registry.manifest import get_default_models_dir, list_versions
+    
+    models_dir = get_default_models_dir()
+    all_manifests = []
+    if models_dir.exists():
+        for p in models_dir.iterdir():
+            if p.is_dir():
+                manifests = list_versions(p.name, models_root=models_dir)
+                all_manifests.extend(manifests)
+    return [m.model_dump() for m in all_manifests]
+
+
+
 
 @router.get("/gpu", response_model=List[GPUStatsResponse], summary="Get real-time NVML hardware stats for visible GPUs")
 async def get_gpu_stats():

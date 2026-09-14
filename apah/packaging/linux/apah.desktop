@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Apah LLM Engine
+Comment=Sovereign Air-Gapped LLM Inference Engine & Dashboard
+Exec=apah-app
+Icon=apah
+Terminal=false
+Type=Application
+Categories=Utility;Development;ArtificialIntelligence;
+StartupNotify=true

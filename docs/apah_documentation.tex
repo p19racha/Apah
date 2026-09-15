@@ -14,6 +14,7 @@
 \usetikzlibrary{shapes.geometric, arrows.meta, positioning, shadows, fit, backgrounds}
 \usepackage{caption}
 \usepackage{subcaption}
+\usepackage{graphicx} % Added to enable \resizebox
 
 % --- Theorems and Formal Definitions ---
 \newtheorem{theorem}{Theorem}[section]
@@ -61,15 +62,25 @@
 }
 
 % --- Title & Metadata ---
-\title{\vspace{-1.5em}\textbf{\Huge Apah: Sovereign, High-Throughput LLM Inference Engine for Air-Gapped Industrial Workbenches}\\[0.4em]
-\Large System Architecture, Paged Memory Virtualization, Multi-GPU Parallelism, and Cryptographic Security}
+\title{\vspace{-1.5em}\textbf{\Huge Apah: A Sovereign, High-Performance LLM Runtime for Air-Gapped Environments}\\[0.4em]
+\Large A System Design for Paged Memory Virtualization, Distributed Inference, and Tamper-Proof Auditing}
 
 \author{
-    \textbf{Kautilya Reddy Racha}\\
-    \textit{Department of Computer Science \& Artificial Intelligence}\\
-    Apah Sovereign AI Core Engineering Initiative\\
-    \texttt{rachakautilyareddy@gmail.com}
+    \IEEEauthorblockN{\textbf{Kautilya Reddy Racha}}
+    \IEEEauthorblockA{ \\
+        \textit{Deportment of Information Technology}\\
+        Vidya Jyothi Institute of Technology\\
+        \texttt{rachakautilyareddy@gmail.com}
+    }
+    \and
+    \IEEEauthorblockN{\textbf{Sathwik Anumandla}}
+    \IEEEauthorblockA{ \\
+        \textit{Deportment of Information Technology}\\
+        Vidya Jyothi Institute of Technology\\
+        \texttt{this.sathwik@gmail.com }
+    }
 }
+
 \date{\today}
 
 \begin{document}
@@ -123,7 +134,8 @@ Apah guarantees:
 
 \begin{table}[h]
 \centering
-\scriptsize
+\renewcommand{\arraystretch}{1.3} % Adds vertical padding to rows
+\resizebox{\columnwidth}{!}{% Shrinks table to fit column width
 \begin{tabular}{@{}lcccc@{}}
 \toprule
 \textbf{Feature / Architecture} & \textbf{Ollama} & \textbf{vLLM} & \textbf{TGI} & \textbf{Apah Engine} \\ \midrule
@@ -135,7 +147,8 @@ Tamper-Evident SHA256 Chain & No & No & No & \textbf{Cryptographic} \\
 Ollama \& OpenAI Dual API & Partial & OpenAI & OpenAI & \textbf{Full Both} \\
 Real-Time NVML Hardware Telemetry & Basic & No & Basic & \textbf{Native Watch} \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \caption{Architectural Comparison Across Inference Runtimes.}
 \label{tab:related_work}
 \end{table}
@@ -300,7 +313,7 @@ class AirgapGuard:
 \begin{definition}[Cryptographic Hash Chain]
 Let $E_k$ be the $k$-th structured JSON log record. The hash chain $\{H_k\}$ is calculated recursively:
 \begin{equation}
-H_0 = \text{"0000000000000000000000000000000000000000000000000000000000000000"}
+H_0 = \text{"64x0"}
 \end{equation}
 \begin{equation}
 H_k = \text{SHA256}\Big( H_{k-1} \mathbin{\Vert} \text{":"} \mathbin{\Vert} \text{CanonicalJSON}(E_k) \Big)
@@ -321,7 +334,8 @@ Experiments were executed on an industrial workstation equipped with an NVIDIA H
 
 \begin{table}[h]
 \centering
-\scriptsize
+\renewcommand{\arraystretch}{1.3} % Adds vertical padding to rows
+\resizebox{\columnwidth}{!}{% Shrinks table to fit column width
 \begin{tabular}{@{}lcccc@{}}
 \toprule
 \textbf{Engine Runtime} & \textbf{Concurrency ($c$)} & \textbf{Throughput (tok/s)} & \textbf{TTFT ($p_{95}$, ms)} & \textbf{VRAM (GB)} \\ \midrule
@@ -332,7 +346,8 @@ Ollama (Baseline) & 16 & 51.8 & 1420 & 14.2 \\ \midrule
 \textbf{Apah Engine} & 4 & \textbf{168.4} & \textbf{182} & \textbf{1.78} \\
 \textbf{Apah Engine} & 16 & \textbf{342.1} & \textbf{210} & \textbf{1.78} \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \caption{Empirical Benchmark Comparison: Apah vs. Ollama on NVIDIA H100.}
 \label{tab:results}
 \end{table}

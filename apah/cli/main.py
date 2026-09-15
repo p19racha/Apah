@@ -4,6 +4,9 @@ import datetime
 from pathlib import Path
 import shutil
 from typing import Optional
+import warnings
+warnings.filterwarnings("ignore")
+
 import typer
 from rich.panel import Panel
 from rich.table import Table

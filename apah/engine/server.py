@@ -6,6 +6,9 @@ import logging
 import os
 import time
 from typing import Optional
+import warnings
+warnings.filterwarnings("ignore")
+
 import torch
 import uvicorn
 from fastapi import FastAPI

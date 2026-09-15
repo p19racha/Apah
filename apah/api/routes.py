@@ -210,7 +210,8 @@ async def load_model_endpoint(request: LoadModelRequest):
         logger.warning(f"Could not perform pre-load integrity verification: {check_err}")
 
     try:
-        runtime = ApahRuntime.from_model_path(
+        runtime = await asyncio.to_thread(
+            ApahRuntime.from_model_path,
             model_path=request.model_path,
             dtype=request.dtype,
             device=request.device,

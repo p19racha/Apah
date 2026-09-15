@@ -46,6 +46,8 @@ class ApahClient:
             raise ServerNotRunningError(
                 f"Could not connect to Apah server at {self.base_url}. Run 'apah serve' first."
             ) from e
+        except httpx.TimeoutException as e:
+            raise ApahAPIError("Health check timed out. Apah server is currently busy processing requests.") from e
         except httpx.HTTPStatusError as e:
             raise ApahAPIError(f"Health check failed: {e.response.text}", status_code=e.response.status_code) from e
         except Exception as e:
@@ -63,6 +65,8 @@ class ApahClient:
             raise ServerNotRunningError(
                 f"Could not connect to Apah server at {self.base_url}. Run 'apah serve' first."
             ) from e
+        except httpx.TimeoutException as e:
+            raise ApahAPIError("Request timed out. Apah server is currently loading model weights or busy processing another request.") from e
         except httpx.HTTPStatusError as e:
             raise ApahAPIError(f"Failed to fetch process status: {e.response.text}", status_code=e.response.status_code) from e
         except Exception as e:
@@ -80,6 +84,8 @@ class ApahClient:
             raise ServerNotRunningError(
                 f"Could not connect to Apah server at {self.base_url}. Run 'apah serve' first."
             ) from e
+        except httpx.TimeoutException as e:
+            raise ApahAPIError("GPU telemetry check timed out. Apah server is currently busy.") from e
         except httpx.HTTPStatusError as e:
             raise ApahAPIError(f"Failed to fetch GPU hardware stats: {e.response.text}", status_code=e.response.status_code) from e
         except Exception as e:

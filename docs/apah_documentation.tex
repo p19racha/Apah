@@ -25,7 +25,7 @@
 \theoremstyle{remark}
 \newtheorem{remark}{Remark}[section]
 
-% --- Color Palette (Academic & Modern Terminal Aesthetic) ---
+% --- Color Palette ---
 \definecolor{ApahAmber}{RGB}{216, 166, 87}
 \definecolor{ApahDarkBg}{RGB}{14, 13, 11}
 \definecolor{ApahGreen}{RGB}{46, 125, 50}
@@ -40,7 +40,7 @@
     citecolor=ApahGreen,
     urlcolor=ApahAmber,
     pdftitle={Apah: Sovereign High-Throughput LLM Inference Engine for Air-Gapped Industrial Environments},
-    pdfauthor={Apah Sovereign Engineering Group}
+    pdfauthor={Kautilya Reddy Racha}
 }
 
 % --- Listings Setup ---
@@ -65,10 +65,10 @@
 \Large System Architecture, Paged Memory Virtualization, Multi-GPU Parallelism, and Cryptographic Security}
 
 \author{
-    \textbf{Apah Sovereign Engineering Group}\\
-    \textit{Department of Artificial Intelligence Engineering \& Confidential Systems}\\
-    Industrial AI Workbench Core Initiative\\
-    \texttt{\{architecture, security, benchmarks\}@apah-sovereign.local}
+    \textbf{Kautilya Reddy Racha}\\
+    \textit{Department of Computer Science \& Artificial Intelligence}\\
+    Apah Sovereign AI Core Engineering Initiative\\
+    \texttt{rachakautilyareddy@gmail.com}
 }
 \date{\today}
 
@@ -91,7 +91,7 @@ While cloud-based APIs (such as OpenAI or Anthropic) offer high throughput throu
     \item \textbf{Concurrency Locking}: Single-sequence generation locks GPU decode loops, forcing parallel agent queries into extended queue delays.
     \item \textbf{VRAM Fragmentation}: Contiguous KV-cache pre-allocation padded to maximal context size $L_{\text{max}}$ wastes up to 87.5\% of GPU VRAM per sequence.
     \item \textbf{Security \& Compliance Vulnerabilities}: Standard socket abstractions leave systems open to unintended network egress, while flat text log files fail auditing requirements due to lack of tamper detection.
-\end{enumerate">
+\end{enumerate}
 
 Apah solves these challenges by combining continuous batch iteration scheduling, virtual memory paging, tensor parallelism, and process-level cryptographic security.
 
@@ -106,13 +106,15 @@ We consider a threat model suited for confidential industrial environments:
     \item \textbf{Unintended Egress / Exfiltration}: Malicious code within third-party agent tools or compromised Python dependencies attempts to open external TCP/UDP sockets to exfiltrate proprietary model prompts or weights.
     \item \textbf{Post-Hoc Audit Alteration}: An insider or compromised process modifies system event logs to erase evidence of unauthorized model execution or prompt injection.
     \item \textbf{Resource Exhaustion / Denial of Service}: Malicious or runaway agent prompts issue massive sequence requests designed to exhaust GPU VRAM and crash the runtime.
-\end{itemize">
+\end{itemize}
 
 \subsection{Security Guarantees}
 Apah guarantees:
-1. \textbf{Kernel Socket Interception}: All non-loopback outbound socket connections (`connect()`) throw immediate `AirgapViolationError` exceptions.
-2. \textbf{Tamper-Evident Audit Chains}: Any historic alteration to log records breaks the SHA256 hash sequence, enabling instant algorithmic detection.
-3. \textbf{Bounded VRAM Preemption}: Memory allocation is strictly virtualized via block table pools; excess requests are preempted to host RAM without crashing the GPU kernel.
+\begin{enumerate}
+    \item \textbf{Kernel Socket Interception}: All non-loopback outbound socket connections (\texttt{connect()}) throw immediate \texttt{AirgapViolationError} exceptions.
+    \item \textbf{Tamper-Evident Audit Chains}: Any historic alteration to log records breaks the SHA256 hash sequence, enabling instant algorithmic detection.
+    \item \textbf{Bounded VRAM Preemption}: Memory allocation is strictly virtualized via block table pools; excess requests are preempted to host RAM without crashing the GPU kernel.
+\end{enumerate}
 
 % =========================================================================
 \section{Related Work \& Architectural Landscape}
@@ -276,7 +278,7 @@ Algorithm~\ref{alg:scheduler} formalizes the iteration scheduler.
 % =========================================================================
 
 \subsection{Socket Interception}
-When `APAH_AIRGAP_MODE=1` is enabled, lower-level socket connections to external non-loopback destinations throw `AirgapViolationError`:
+When \texttt{APAH\_AIRGAP\_MODE=1} is enabled, lower-level socket connections to external non-loopback destinations throw \texttt{AirgapViolationError}:
 
 \begin{lstlisting}[language=Python, caption=Low-level Socket Monkey-Patching in Apah Runtime]
 class AirgapGuard:
@@ -333,9 +335,9 @@ Ollama (Baseline) & 16 & 51.8 & 1420 & 14.2 \\ \midrule
 \end{tabular}
 \caption{Empirical Benchmark Comparison: Apah vs. Ollama on NVIDIA H100.}
 \label{tab:results}
-\end{table">
+\end{table}
 
-Under concurrency $c=16$, Apah achieves **342.1 tok/s aggregate throughput** (a **6.6x speedup** over Ollama) while utilizing only 1.78 GB of VRAM for KV-cache memory (**87.5\% savings**).
+Under concurrency $c=16$, Apah achieves \textbf{342.1 tok/s aggregate throughput} (a \textbf{6.6x speedup} over Ollama) while utilizing only 1.78 GB of VRAM for KV-cache memory (\textbf{87.5\% savings}).
 
 % =========================================================================
 \section{Conclusion}

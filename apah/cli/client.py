@@ -42,7 +42,7 @@ class ApahClient:
                 resp = client.get(url)
                 resp.raise_for_status()
                 return resp.json()
-        except httpx.ConnectError as e:
+        except (httpx.ConnectError, getattr(httpx, "ConnectRefusedError", httpx.ConnectError)) as e:
             raise ServerNotRunningError(
                 f"Could not connect to Apah server at {self.base_url}. Run 'apah serve' first."
             ) from e
@@ -59,7 +59,7 @@ class ApahClient:
                 resp = client.get(url)
                 resp.raise_for_status()
                 return resp.json()
-        except httpx.ConnectError as e:
+        except (httpx.ConnectError, getattr(httpx, "ConnectRefusedError", httpx.ConnectError)) as e:
             raise ServerNotRunningError(
                 f"Could not connect to Apah server at {self.base_url}. Run 'apah serve' first."
             ) from e
@@ -76,7 +76,7 @@ class ApahClient:
                 resp = client.get(url)
                 resp.raise_for_status()
                 return resp.json()
-        except httpx.ConnectError as e:
+        except (httpx.ConnectError, getattr(httpx, "ConnectRefusedError", httpx.ConnectError)) as e:
             raise ServerNotRunningError(
                 f"Could not connect to Apah server at {self.base_url}. Run 'apah serve' first."
             ) from e
@@ -111,7 +111,7 @@ class ApahClient:
                         err_msg = resp.text
                     raise ApahAPIError(f"Load model failed: {err_msg}", status_code=resp.status_code)
                 return resp.json()
-        except httpx.ConnectError as e:
+        except (httpx.ConnectError, getattr(httpx, "ConnectRefusedError", httpx.ConnectError)) as e:
             raise ServerNotRunningError(
                 f"Could not connect to Apah server at {self.base_url}. Run 'apah serve' first."
             ) from e
@@ -135,7 +135,7 @@ class ApahClient:
                         err_msg = resp.text
                     raise ApahAPIError(f"Unload model failed: {err_msg}", status_code=resp.status_code)
                 return resp.json()
-        except httpx.ConnectError as e:
+        except (httpx.ConnectError, getattr(httpx, "ConnectRefusedError", httpx.ConnectError)) as e:
             raise ServerNotRunningError(
                 f"Could not connect to Apah server at {self.base_url}. Run 'apah serve' first."
             ) from e
@@ -184,7 +184,7 @@ class ApahClient:
                         err_msg = resp.text
                     raise ApahAPIError(f"Chat completion failed: {err_msg}", status_code=resp.status_code)
                 return resp.json()
-        except httpx.ConnectError as e:
+        except (httpx.ConnectError, getattr(httpx, "ConnectRefusedError", httpx.ConnectError)) as e:
             raise ServerNotRunningError(
                 f"Could not connect to Apah server at {self.base_url}. Run 'apah serve' first."
             ) from e
@@ -252,7 +252,7 @@ class ApahClient:
                                         yield content
                             except json.JSONDecodeError:
                                 continue
-        except httpx.ConnectError as e:
+        except (httpx.ConnectError, getattr(httpx, "ConnectRefusedError", httpx.ConnectError)) as e:
             raise ServerNotRunningError(
                 f"Could not connect to Apah server at {self.base_url}. Run 'apah serve' first."
             ) from e

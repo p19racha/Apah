@@ -75,11 +75,9 @@ def test_ws_stats_stream(client):
 def test_ws_logs_stream(client):
     """Verify WebSocket /ws/logs streams new audit log entries as written."""
     server_state.audit_logger.log_event("dashboard_test_event", details={"phase": 12})
-
     with client.websocket_connect("/ws/logs") as websocket:
-        # Receive lines until our test event arrives
         found = False
-        for _ in range(10):
+        while True:
             try:
                 line = websocket.receive_text()
                 if "dashboard_test_event" in line:

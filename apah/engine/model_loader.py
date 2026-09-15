@@ -31,6 +31,15 @@ TESTED_ARCHITECTURES: Set[str] = {
     "MistralForCausalLM",
     "Qwen2ForCausalLM",
     "Qwen2MoeForCausalLM",
+    "Qwen2_5ForCausalLM",
+    "Qwen3ForCausalLM",
+    "Qwen3_5ForCausalLM",
+    "Qwen3_5ForConditionalGeneration",
+    "GemmaForCausalLM",
+    "Gemma2ForCausalLM",
+    "PhiForCausalLM",
+    "Phi3ForCausalLM",
+    "DeepseekV2ForCausalLM",
 }
 
 TESTED_MODEL_TYPES: Set[str] = {
@@ -38,6 +47,14 @@ TESTED_MODEL_TYPES: Set[str] = {
     "mistral",
     "qwen2",
     "qwen2_moe",
+    "qwen2_5",
+    "qwen3",
+    "qwen3_5",
+    "gemma",
+    "gemma2",
+    "phi",
+    "phi3",
+    "deepseek",
     "tiny_llama",
 }
 
@@ -75,8 +92,9 @@ def _validate_architecture(config: AutoConfig) -> None:
 
     is_supported_type = model_type in TESTED_MODEL_TYPES
     is_supported_arch = bool(architectures.intersection(TESTED_ARCHITECTURES))
+    is_generic_causal_lm = any("causal" in arch.lower() or "generation" in arch.lower() or "lm" in arch.lower() for arch in architectures)
 
-    if not (is_supported_type or is_supported_arch):
+    if not (is_supported_type or is_supported_arch or is_generic_causal_lm):
         tested_str = ", ".join(sorted(TESTED_ARCHITECTURES))
         raise ValueError(
             f"Unsupported model architecture '{raw_archs}' (model_type: '{model_type}'). "

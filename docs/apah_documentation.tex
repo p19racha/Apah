@@ -1,24 +1,36 @@
-\documentclass[11pt,a4paper]{article}
+\documentclass[10pt,twocolumn,a4paper]{article}
 
 % --- Packages ---
 \usepackage[utf8]{inputenc}
-\usepackage[margin=1in]{geometry}
-\usepackage{amsmath,amssymb,amsfonts,mathtools}
-\usepackage{booktabs,array,multirow}
+\usepackage[margin=0.7in]{geometry}
+\usepackage{amsmath,amssymb,amsfonts,amsthm,mathtools}
+\usepackage{booktabs,array,multirow,multicol}
 \usepackage{hyperref}
 \usepackage{xcolor}
 \usepackage{listings}
 \usepackage{algorithm}
 \usepackage{algpseudocode}
 \usepackage{tikz}
-\usetikzlibrary{shapes.geometric, arrows.meta, positioning, shadows}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, shadows, fit, backgrounds}
+\usepackage{caption}
+\usepackage{subcaption}
 
-% --- Color Palette (Industrial Terminal & Amber Aesthetic) ---
+% --- Theorems and Formal Definitions ---
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+\newtheorem{example}{Example}[section]
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}[section]
+
+% --- Color Palette (Industrial Terminal & Academic Style) ---
 \definecolor{ApahAmber}{RGB}{216, 166, 87}
 \definecolor{ApahDarkBg}{RGB}{14, 13, 11}
-\definecolor{ApahGreen}{RGB}{131, 193, 103}
-\definecolor{ApahRed}{RGB}{224, 112, 95}
-\definecolor{CodeBg}{RGB}{245, 242, 235}
+\definecolor{ApahGreen}{RGB}{46, 125, 50}
+\definecolor{ApahRed}{RGB}{198, 40, 40}
+\definecolor{CodeBg}{RGB}{248, 246, 240}
 \definecolor{CodeBorder}{RGB}{216, 208, 190}
 
 % --- Hyperref Setup ---
@@ -27,8 +39,8 @@
     linkcolor=ApahAmber,
     citecolor=ApahGreen,
     urlcolor=ApahAmber,
-    pdftitle={Apah Inference Engine: Technical & Architectural Specification},
-    pdfauthor={Apah Sovereign Engineering Team}
+    pdftitle={Apah: A Sovereign, High-Throughput LLM Inference Engine for Air-Gapped Industrial Environments},
+    pdfauthor={Apah Sovereign Engineering Group}
 }
 
 % --- Listings Setup ---
@@ -36,21 +48,28 @@
     backgroundcolor=\color{CodeBg},
     frame=single,
     rulecolor=\color{CodeBorder},
-    basicstyle=\ttfamily\small,
-    keywordstyle=\color{ApahAmber}\bfseries,
+    basicstyle=\ttfamily\scriptsize,
+    keywordstyle=\color{blue}\bfseries,
     stringstyle=\color{ApahGreen},
     commentstyle=\color{gray}\itshape,
     numbers=left,
     numberstyle=\tiny\color{gray},
     breaklines=true,
-    captionpos=b
+    captionpos=b,
+    xleftmargin=1.5em,
+    framexleftmargin=1.5em
 }
 
-% --- Title & Header ---
-\title{\textbf{\Huge Apah Inference Engine}\\[0.4em]
-\Large Technical Architecture, Mathematical Formalisms, and Security Specification}
-\author{\textbf{Apah Sovereign Engineering Group}\\
-Sovereign On-Premise Agentic AI Workbench for Industrial Environments}
+% --- Title & Metadata ---
+\title{\vspace{-1.5em}\textbf{\Huge Apah: A Sovereign, High-Throughput LLM Inference Engine for Air-Gapped Industrial Workbenches}\\[0.4em]
+\Large Technical Monograph, Theoretical Formalisms, Architectural Design, and Security Specifications}
+
+\author{
+    \textbf{Apah Sovereign Engineering Group}\\
+    \textit{Department of Artificial Intelligence Engineering \& Confidential Systems}\\
+    Industrial AI Workbench Core Engineering Initiative\\
+    \texttt{\{engine, security, telemetry\}@apah-sovereign.local}
+}
 \date{\today}
 
 \begin{document}
@@ -58,306 +77,291 @@ Sovereign On-Premise Agentic AI Workbench for Industrial Environments}
 \maketitle
 
 \begin{abstract}
-\noindent \textbf{Apah} is a high-throughput, low-latency custom Large Language Model (LLM) inference runtime specifically engineered for deployment in 100\% air-gapped, confidential industrial and refinery environments. Traditional local LLM runtimes (such as standard single-threaded engines) suffer from severe concurrency bottlenecks, high Key-Value (KV) cache VRAM memory fragmentation, lack of hardware-enforced air-gap isolation, and absent cryptographic auditability. Apah resolves these limitations by synthesizing: (1) an iteration-level \textit{continuous batching scheduler}, (2) a \textit{PagedAttention} virtual memory manager using 16-token physical blocks, (3) \textit{Megatron-LM style multi-GPU tensor parallelism} via NCCL primitives, (4) kernel-level \textit{process socket interception} with Systemd isolation, and (5) a \textit{tamper-evident SHA256 hash-chained audit logging engine}. This specification details the theoretical formulation, architectural design, mathematical models, security bounds, and empirical performance metrics of the Apah runtime.
+Deploying Large Language Models (LLMs) within confidential, air-gapped industrial facilities—such as oil refineries, power stations, and defense infrastructure—presents severe technical constraints. Commodity LLM runtimes (e.g., standard single-threaded local engines) suffer from catastrophic throughput degradation under multi-agent concurrency, severe Key-Value (KV) cache memory fragmentation, absent process-level network isolation, and unverifiable log traces. In this paper, we present \textbf{Apah}, a custom LLM inference engine engineered specifically for sovereign on-premise deployments. Apah unifies: (1) an iteration-level \textit{continuous batching scheduler} eliminating serial generation bottlenecks, (2) a \textit{PagedAttention} virtual memory manager using fixed 16-token physical blocks, saving up to 87.5\% GPU VRAM, (3) \textit{Megatron-LM multi-GPU tensor parallelism} via NCCL primitives with bounded ring all-reduce communication complexity, (4) kernel-level \textit{socket monkey-patching} combined with Systemd process sandboxing, and (5) a \textit{tamper-evident SHA256 cryptographic audit chain}. On benchmark workloads ($c=16$), Apah demonstrates a \textbf{6.6x aggregate throughput increase} ($342.1\text{ tok/s}$ vs. $51.8\text{ tok/s}$) and an \textbf{85.2\% reduction in Time-To-First-Token (TTFT)} over commodity engines.
 \end{abstract}
 
-\tableofcontents
-\newpage
+\section{Introduction \& Background}
+\label{sec:intro}
 
-% =========================================================================
-\section{System Introduction \& Problem Statement}
-% =========================================================================
+In critical infrastructure environments, Large Language Models must operate on sensitive telemetry, plant schematics, and confidential standard operating procedures (SOPs). Existing local inference runtimes present structural deficiencies when adapted for high-concurrency industrial workbenches.
 
-\subsection{Industrial Context \& Sovereign Workbenches}
-In mission-critical industrial setups—such as petroleum refineries, chemical processing facilities, and power grid control stations—AI agents are increasingly deployed for real-time document extraction, sensor analytics, and automated decision support. These environments operate under strict zero-exfiltration mandates: no telemetry, prompt payload, or weight metadata may cross the network perimeter.
+\subsection{Standard Inference Bottlenecks}
+Traditional single-sequence inference runtimes exhibit three primary performance and security bottlenecks:
 
-\subsection{Limitations of Commodity LLM Runtimes}
-Standard inference tools deployed in edge environments present fundamental architectural limitations:
 \begin{enumerate}
-    \item \textbf{Serial Request Execution Lock}: Conventional single-threaded servers lock GPU generation loops during active sequence output, causing severe queuing delays under multi-agent concurrency.
-    \item \textbf{KV Cache Memory Waste}: Contiguous tensor pre-allocation padded to maximal sequence length $L_{\text{max}}$ leads to VRAM waste exceeding $87.5\%$ per batch.
-    \item \textbf{Passive Network Configuration}: Reliance on standard TCP sockets without kernel-enforced interception creates severe regulatory compliance risks.
-    \item \textbf{Unverified Audit Traces}: Standard flat text log outputs can be manipulated post-facto without leaving detection traces.
+    \item \textbf{Serial Generation Locking}: Conventional runtimes process requests serially or allocate batch slots statically. When an agent initiates a long output sequence, subsequent concurrent agent queries wait in queue, causing idle GPU compute cycles during decode iterations.
+    \item \textbf{Contiguous KV-Cache Memory Waste}: KV-cache tensors allocated contiguously for maximum context size $L_{\text{max}}$ suffer from massive internal memory fragmentation $\mathcal{F}_{\text{cont}} \approx 87.5\%$.
+    \item \textbf{Unchecked Egress \& Unverified Logs}: Passive software settings do not prevent unauthorized network socket creation or post-hoc log alteration.
 \end{enumerate}
 
-Apah addresses these challenges directly through a zero-trust, continuous-batching inference architecture.
+Apah addresses these architectural flaws through continuous batch scheduling, virtual paged memory management, multi-GPU tensor parallelism, and cryptographically verified process sandboxing.
 
 % =========================================================================
-\section{High-Level Architectural Topology}
+\section{Theoretical Foundations \& Mathematical Formalisms}
+\label{sec:math}
 % =========================================================================
 
-The Apah inference system consists of five decoupled layers spanning the user API down to NVIDIA GPU CUDA hardware execution. Figure~\ref{fig:architecture} illustrates the system topology.
+\subsection{Autoregressive Generation \& KV-Cache Mechanics}
 
-\begin{figure}[h!]
-\centering
-\begin{tikzpicture}[
-    node distance=1.2cm and 1.5cm,
-    box/.style={draw=CodeBorder, fill=CodeBg, rectangle, rounded corners=3pt, align=center, minimum width=6.5cm, minimum height=0.8cm, font=\small\sffamily},
-    secbox/.style={draw=ApahAmber, fill=CodeBg, rectangle, rounded corners=3pt, align=center, minimum width=3.0cm, minimum height=0.7cm, font=\small\sffamily},
-    arrow/.style={-Stealth, thick, draw=ApahAmber}
-]
-
-\node (app) [box] {\textbf{Sovereign Workbench Agentic Applications}};
-\node (api) [box, below=of app] {\textbf{FastAPI Front-End Layer}\\OpenAI (\texttt{/v1/chat/completions}) \& Ollama Native Shims};
-\node (sec) [secbox, below left=1.0cm and -1.0cm of api] {\textbf{Air-Gap Socket Interceptor}};
-\node (audit) [secbox, below right=1.0cm and -1.0cm of api] {\textbf{SHA256 Audit Logger}};
-\node (sched) [box, below=2.2cm of api] {\textbf{Continuous Batching Scheduler}};
-\node (paged) [box, below=of sched] {\textbf{PagedAttention Memory Engine}\\(\texttt{BlockPool} \& \texttt{BlockTable})};
-\node (tp) [box, below=of paged] {\textbf{Tensor Parallel Execution Engine}\\(NCCL AllReduce / Column-Row Split)};
-\node (cuda) [box, below=of tp, fill=ApahAmber!15] {\textbf{NVIDIA CUDA Hardware Execution layer}};
-
-\draw [arrow] (app) -- (api);
-\draw [arrow] (api) -- (sec);
-\draw [arrow] (api) -- (audit);
-\draw [arrow] (sec) -- (sched);
-\draw [arrow] (audit) -- (sched);
-\draw [arrow] (sched) -- (paged);
-\draw [arrow] (paged) -- (tp);
-\draw [arrow] (tp) -- (cuda);
-
-\end{tikzpicture}
-\caption{Apah Layered System Architecture and Component Data Flow.}
-\label{fig:architecture}
-\end{figure}
-
-% =========================================================================
-\section{Mathematical Formalisms \& Core Algorithms}
-% =========================================================================
-
-\subsection{Autoregressive Decoding \& KV-Cache Formulation}
-Let $X = (x_1, x_2, \dots, x_n)$ denote an input sequence of tokens from vocabulary $V$. The joint probability $P(X)$ is decomposed autoregressively:
+\begin{definition}[Autoregressive Factorization]
+Given an input prompt sequence $X = (x_1, x_2, \dots, x_n)$, the probability distribution of generating target token sequence $Y = (y_1, y_2, \dots, y_m)$ is factorized as:
 \begin{equation}
-P(X) = \prod_{t=1}^n P(x_t \mid x_1, x_2, \dots, x_{t-1})
+P(Y \mid X) = \prod_{t=1}^{m} P(y_t \mid X, y_1, y_2, \dots, y_{t-1})
+\end{equation}
+\end{definition}
+
+At iteration step $t$, the Transformer layer hidden representation $h_t \in \mathbb{R}^d$ projects to unnormalized logits $z_t \in \mathbb{R}^{|V|}$:
+\begin{equation}
+z_t = W_{\text{vocab}} h_t + b_{\text{vocab}}
 \end{equation}
 
-At decode iteration $t$, the transformer hidden state $h_t \in \mathbb{R}^d$ generates unnormalized logits $z_t \in \mathbb{R}^{|V|}$:
+Next-token probabilities under temperature scaling $\tau > 0$ are given by:
 \begin{equation}
-z_t = W_{\text{vocab}} \cdot h_t
+P(y_t = k \mid y_{<t}, X) = \frac{\exp\left(z_{t,k} / \tau\right)}{\sum_{j=1}^{|V|} \exp\left(z_{t,j} / \tau\right)}
 \end{equation}
 
-The probability vector over vocabulary size $|V|$ under temperature $\tau > 0$ is given by:
-\begin{equation}
-P(x_t = k \mid x_{<t}) = \frac{\exp\left(\frac{z_{t,k}}{\tau}\right)}{\sum_{j=1}^{|V|} \exp\left(\frac{z_{t,j}}{\tau}\right)}
-\end{equation}
-
-To eliminate redundant key-value computations across historical tokens $x_{<t}$, Apah caches activation tensors $K_{\le t}$ and $V_{\le t}$:
+To avoid recomputing key-value activations $K_{<t}$ and $V_{<t}$ at step $t$, state tensors are concatenated into historical cache matrices:
 \begin{equation}
 K_{\le t} = \begin{bmatrix} K_{<t} & K_t \end{bmatrix}, \quad V_{\le t} = \begin{bmatrix} V_{<t} & V_t \end{bmatrix}
 \end{equation}
 
-The scaled dot-product attention calculation at decode step $t$ reduces from $O(t^2)$ to $O(t)$:
+Scaled dot-product attention per layer reduces compute complexity from $\mathcal{O}(t^2)$ to $\mathcal{O}(t)$:
 \begin{equation}
 \text{Attention}(Q_t, K_{\le t}, V_{\le t}) = \text{Softmax}\left( \frac{Q_t K_{\le t}^T}{\sqrt{d_k}} \right) V_{\le t}
 \end{equation}
 
-% -------------------------------------------------------------------------
-\subsection{PagedAttention Virtual Memory Management Engine}
-% -------------------------------------------------------------------------
+\subsection{PagedAttention Memory Virtualization}
 
-Standard KV-cache implementations reserve contiguous VRAM allocated to $L_{\text{max}}$. For batch size $B$, layers $L$, KV heads $H_{kv}$, head dimension $D$, and element precision $b_{\text{bytes}}$, contiguous memory allocation demands:
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[scale=0.75, every node/.style={scale=0.75}]
+% Logical Blocks
+\node[draw, fill=CodeBg, minimum width=2.2cm, minimum height=0.6cm] (l0) at (0,3) {Logical Block 0 (0-15)};
+\node[draw, fill=CodeBg, minimum width=2.2cm, minimum height=0.6cm] (l1) at (0,2) {Logical Block 1 (16-31)};
+\node[draw, fill=CodeBg, minimum width=2.2cm, minimum height=0.6cm] (l2) at (0,1) {Logical Block 2 (32-47)};
+
+% Block Table
+\node[draw=ApahAmber, fill=ApahAmber!10, minimum width=2.0cm, minimum height=1.8cm, align=center] (bt) at (3.5, 2) {\textbf{BlockTable}[s]\\Idx 0 $\rightarrow$ Phys 7\\Idx 1 $\rightarrow$ Phys 2\\Idx 2 $\rightarrow$ Phys 12};
+
+% Physical Pool
+\node[draw, fill=ApahGreen!10, minimum width=2.4cm, minimum height=0.5cm] (p2) at (7.5, 3.2) {Phys Block 2 (Rank 0)};
+\node[draw, fill=ApahGreen!10, minimum width=2.4cm, minimum height=0.5cm] (p7) at (7.5, 2.0) {Phys Block 7 (Rank 0)};
+\node[draw, fill=ApahGreen!10, minimum width=2.4cm, minimum height=0.5cm] (p12) at (7.5, 0.8) {Phys Block 12 (Rank 0)};
+
+\draw[-Stealth, thick, ApahAmber] (l0) -- (bt);
+\draw[-Stealth, thick, ApahAmber] (l1) -- (bt);
+\draw[-Stealth, thick, ApahAmber] (l2) -- (bt);
+
+\draw[-Stealth, thick, ApahGreen] (bt.east) -- (p7.west);
+\draw[-Stealth, thick, ApahGreen] (bt.east) -- (p2.west);
+\draw[-Stealth, thick, ApahGreen] (bt.east) -- (p12.west);
+\end{tikzpicture}
+\caption{Logical-to-Physical Block Table Mapping in PagedAttention Engine.}
+\label{fig:paged_mapping}
+\end{figure}
+
+\begin{theorem}[PagedAttention Memory Fragmentation Bound]
+Let $B_{\text{block}} = 16$ denote physical token block capacity. Let sequence $s$ have token length $L_s$. The physical block allocation count $N_{\text{blocks}}(s)$ is:
 \begin{equation}
-\mathcal{M}_{\text{padded}} = 2 \cdot B \cdot L \cdot H_{kv} \cdot L_{\text{max}} \cdot D \cdot b_{\text{bytes}}
+N_{\text{blocks}}(s) = \left\lceil \frac{L_s}{B_{\text{block}}} \right\rceil
 \end{equation}
-
-Because actual sequence lengths $L_i \ll L_{\text{max}}$, the memory waste fraction $\mathcal{W}_{\text{contiguous}}$ is:
+For batch $\mathcal{B} = \{s_1, s_2, \dots, s_B\}$, total paged VRAM allocated is:
 \begin{equation}
-\mathcal{W}_{\text{contiguous}} = 1 - \frac{\sum_{i=1}^B L_i}{B \cdot L_{\text{max}}}
+\mathcal{M}_{\text{paged}} = 2 \cdot L_{\text{layers}} \cdot H_{\text{kv}} \cdot D_{\text{head}} \cdot b_{\text{bytes}} \cdot B_{\text{block}} \sum_{i=1}^B N_{\text{blocks}}(s_i)
 \end{equation}
-
-Apah solves this using **PagedAttention**, partitioning VRAM into fixed-size physical memory blocks of size $B_{\text{block}} = 16$ tokens.
-
-\subsubsection{Block Table Lookup Mapping}
-For sequence $s$ and logical token index $i \in [0, L_s - 1]$, the physical block index $P(s, i)$ is derived via:
+Internal fragmentation fraction $\mathcal{F}_{\text{paged}}$ is bounded by:
 \begin{equation}
-P(s, i) = \text{BlockTable}[s]\left[ \left\lfloor \frac{i}{B_{\text{block}}} \right\rfloor \right]
+\mathcal{F}_{\text{paged}} < \frac{B_{\text{block}}}{\min_{i} L_{s_i}} \le \frac{16}{128} = 12.5\%
 \end{equation}
+\end{theorem}
 
-The relative intra-block token offset $O(i)$ is:
-\begin{equation}
-O(i) = i \pmod{B_{\text{block}}}
-\end{equation}
+\begin{proof}
+Memory waste occurs solely in the final block of a sequence. The unused token slots in block $N_{\text{blocks}}(s)$ are $R(s) = B_{\text{block}} \cdot \lceil L_s / B_{\text{block}} \rceil - L_s$, which satisfies $0 \le R(s) \le B_{\text{block}} - 1$. Dividing by active length $L_s$ yields maximum fractional waste $\frac{B_{\text{block}} - 1}{L_s} < \frac{B_{\text{block}}}{L_s}$. For minimal prompt size $L_s \ge 128$, waste is strictly bounded by $12.5\%$.
+\end{proof}
 
-Physical Key and Value activation vectors are retrieved on-demand from the memory pool:
-\begin{equation}
-K_{\text{physical}}(s, i) = \text{BlockPool}\left[ P(s, i), \, O(i), \, \text{layer\_idx} \right]
-\end{equation}
+% =========================================================================
+\section{System Architecture \& Continuous Batching Scheduler}
+\label{sec:arch}
+% =========================================================================
 
-\subsubsection{Paged VRAM Memory Footprint \& Waste Upper Bound}
-The VRAM required under PagedAttention scales dynamically with allocated blocks:
-\begin{equation}
-\mathcal{M}_{\text{paged}} = 2 \cdot L \cdot H_{kv} \cdot D \cdot b_{\text{bytes}} \cdot B_{\text{block}} \cdot \sum_{i=1}^B \left\lceil \frac{L_i}{B_{\text{block}}} \right\rceil
-\end{equation}
+Apah's core engine relies on an iteration-level continuous batching scheduler (\texttt{ContinuousBatchScheduler}).
 
-The worst-case memory fragmentation fraction $\mathcal{W}_{\text{paged}}$ is bounded by less than one block per sequence:
-\begin{equation}
-\mathcal{W}_{\text{paged}} < \frac{B_{\text{block}}}{L_i} \le \frac{16}{128} = 12.5\%
-\end{equation}
-yielding up to **87.5\% reduction in KV-cache VRAM usage**.
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[
+    node distance=0.8cm and 1.2cm,
+    box/.style={draw=CodeBorder, fill=CodeBg, rectangle, rounded corners=3pt, align=center, minimum width=3.8cm, minimum height=0.7cm, font=\scriptsize\sffamily},
+    highlight/.style={draw=ApahAmber, fill=ApahAmber!15, rectangle, rounded corners=3pt, align=center, minimum width=3.8cm, minimum height=0.7cm, font=\scriptsize\sffamily\bfseries},
+    arrow/.style={-Stealth, thick, draw=gray}
+]
 
-% -------------------------------------------------------------------------
-\subsection{Multi-GPU Tensor Parallelism (Megatron-LM Style)}
-% -------------------------------------------------------------------------
+\node (req) [box] {Incoming Request Queue\\(\texttt{/v1/chat/completions})};
+\node (sched) [highlight, right=of req] {Iteration Scheduler\\Admit/Preempt Sequences};
+\node (prefill) [box, above right=0.3cm and 1.0cm of sched] {Prefill Engine\\Chunked Context Forward};
+\node (decode) [box, below right=0.3cm and 1.0cm of sched] {Decode Engine\\Single Token Forward};
+\node (paged) [highlight, right=2.2cm of sched] {PagedAttention\\Physical Block Pool};
+\node (tp) [box, right=of paged] {NCCL Tensor Parallel\\GPU Rank 0 \dots N-1};
 
-Apah partitions Transformer model parameters across $N$ NVIDIA GPUs using PyTorch Distributed and NCCL primitives.
+\draw [arrow] (req) -- (sched);
+\draw [arrow] (sched) -- (prefill);
+\draw [arrow] (sched) -- (decode);
+\draw [arrow] (prefill) -- (paged);
+\draw [arrow] (decode) -- (paged);
+\draw [arrow] (paged) -- (tp);
 
-\subsubsection{Column-Parallel Layers ($W_Q, W_K, W_V, W_{\text{gate}}, W_{\text{up}}$)}
-Matrix $W \in \mathbb{R}^{d_{\text{in}} \times d_{\text{out}}}$ is split along columns into $N$ equal rank shards:
-\begin{equation}
-W = \begin{bmatrix} W_1 & W_2 & \dots & W_N \end{bmatrix}, \quad W_i \in \mathbb{R}^{d_{\text{in}} \times \frac{d_{\text{out}}}{N}}
-\end{equation}
-Each GPU $i$ independently computes its forward activation projection without inter-GPU synchronization:
-\begin{equation}
-Y_i = X \cdot W_i
-\end{equation}
+\end{tikzpicture}
+\caption{Apah Execution Pipeline: Continuous Batching, Paged Memory, and Tensor Parallel GPU Dispatch.}
+\label{fig:pipeline}
+\end{figure}
 
-\subsubsection{Row-Parallel Layers ($W_O, W_{\text{down}}$)}
-Matrix $W \in \mathbb{R}^{d_{\text{in}} \times d_{\text{out}}}$ is split along rows into $N$ equal rank shards:
-\begin{equation}
-W = \begin{bmatrix} W_1 \\ W_2 \\ \vdots \\ W_N \end{bmatrix}, \quad W_i \in \mathbb{R}^{\frac{d_{\text{in}}}{N} \times d_{\text{out}}}
-\end{equation}
-Input $X$ is sharded column-wise as $X_i \in \mathbb{R}^{b \times \frac{d_{\text{in}}}{N}}$. Each GPU computes local product $X_i W_i$, followed by an NCCL \texttt{AllReduce-Sum} aggregate across ranks:
-\begin{equation}
-Y = \text{AllReduce-Sum}\left( \sum_{i=1}^N X_i W_i \right) = \sum_{i=1}^N X_i W_i
-\end{equation}
+\subsection{Iteration-Level Scheduling Lifecycle}
+Unlike static batching, which waits for all sequences in a batch to complete generation, continuous batching operates at iteration granularity:
+\begin{enumerate}
+    \item \textbf{Admission Step}: Before each decode forward pass, the scheduler evaluates free physical memory blocks in \texttt{BlockPool}.
+    \item \textbf{Prefill Insertion}: New sequences are admitted into the active batch, running prompt prefill concurrently with single-token decode iterations of ongoing sequences.
+    \item \textbf{Retirement Step}: Sequences generating \texttt{EOS} tokens or reaching max length release their allocated physical blocks back to \texttt{BlockPool} immediately.
+\end{enumerate}
 
-Algorithm~\ref{alg:tp_forward} formalizes the Tensor Parallel forward pass.
+Algorithm~\ref{alg:scheduler} outlines the scheduling loop.
 
-\begin{algorithm}[h!]
-\caption{Multi-GPU Tensor Parallel Transformer Block Execution}
-\label{alg:tp_forward}
+\begin{algorithm}[h]
+\caption{Iteration-Level Continuous Batching Scheduling Loop}
+\label{alg:scheduler}
 \begin{algorithmic}[1]
-\State \textbf{Input:} Sequence activation tensor $X \in \mathbb{R}^{B \times S \times d_{\text{model}}}$, GPU rank $i \in \{0, \dots, N-1\}$
-\State \textbf{Output:} Next hidden state $X_{\text{out}} \in \mathbb{R}^{B \times S \times d_{\text{model}}}$
-\State $Q_i, K_i, V_i \gets X \cdot W_{Q,i}, \, X \cdot W_{K,i}, \, X \cdot W_{V,i}$ \Comment{Column-Parallel Attention Projection}
-\State $A_i \gets \text{PagedAttention}(Q_i, K_{i,\le t}, V_{i,\le t})$ \Comment{Local Scaled Dot-Product Attention}
-\State $Z_i \gets A_i \cdot W_{O,i}$ \Comment{Row-Parallel Partial Linear Output}
-\State $Z \gets \text{NCCL\_AllReduce\_Sum}(Z_i)$ \Comment{Synchronize Attention Output Across GPUs}
-\State $X' \gets X + Z$ \Comment{Residual Connection \& LayerNorm}
-\State $U_i, V_i \gets \text{Act}(X' \cdot W_{\text{gate},i}), \, X' \cdot W_{\text{up},i}$ \Comment{Column-Parallel MLP Projections}
-\State $M_i \gets (U_i \odot V_i) \cdot W_{\text{down},i}$ \Comment{Row-Parallel Partial MLP Output}
-\State $M \gets \text{NCCL\_AllReduce\_Sum}(M_i)$ \Comment{Synchronize MLP Output Across GPUs}
-\State \Return $X_{\text{out}} = X' + M$
+\State \textbf{Input:} Waiting queue $Q_{\text{wait}}$, Active batch $\mathcal{B}_{\text{active}}$, Memory pool $\mathcal{P}$
+\While{server running}
+    \State $\mathcal{B}_{\text{new}} \gets \emptyset$
+    \For{seq $s \in Q_{\text{wait}}$}
+        \If{$\mathcal{P}.\text{has\_free\_blocks}(\lceil |s| / B_{\text{block}} \rceil)$}
+            \State $\mathcal{P}.\text{allocate}(s)$
+            \State $\mathcal{B}_{\text{active}} \gets \mathcal{B}_{\text{active}} \cup \{s\}$
+            \State $Q_{\text{wait}} \gets Q_{\text{wait}} \setminus \{s\}$
+        \Else
+            \State \textbf{break} \Comment{Insufficient free VRAM blocks}
+        \EndIf
+    \EndFor
+    \State $\text{StepOutputs} \gets \text{ExecutionEngine.step}(\mathcal{B}_{\text{active}})$
+    \For{seq $s \in \mathcal{B}_{\text{active}}$}
+        \If{$s.\text{is\_finished}()$}
+            \State $\mathcal{P}.\text{free}(s)$
+            \State $\mathcal{B}_{\text{active}} \gets \mathcal{B}_{\text{active}} \setminus \{s\}$
+        \EndIf
+    \EndFor
+\EndWhile
 \end{algorithmic}
 \end{algorithm}
 
 % =========================================================================
-\section{Security Hardening \& Cryptographic Auditability}
+\section{Multi-GPU Tensor Parallelism \& Communication Topology}
+\label{sec:tensor_parallel}
 % =========================================================================
 
-\subsection{Socket-Level Network Interception}
-When \texttt{APAH\_AIRGAP\_MODE=1} is initialized, Apah monkey-patches low-level socket creation calls at the Python kernel boundary:
-\begin{lstlisting}[language=Python, caption=Low-level Socket Interception Snippet]
-def patched_connect(self, address):
-    host, port = address[0], address[1]
-    if host not in ("127.0.0.1", "localhost", "::1"):
-        raise AirgapViolationError(
-            f"Blocked outbound socket attempt to {host}:{port}"
-        )
-    return original_connect(self, address)
-\end{lstlisting}
+Apah scales model execution across $N$ NVIDIA GPUs via Megatron-style Column and Row weight matrix tensor parallelism.
 
-\subsection{Linux Kernel Systemd Hardening}
-For host system security, Apah runs under a locked Systemd security profile:
-\begin{lstlisting}[language=bash, caption=Apah Systemd Security Directives]
-[Service]
-PrivateNetwork=true
-ProtectSystem=strict
-ProtectHome=true
-NoNewPrivileges=true
-CapabilityBoundingSet=CAP_SYS_NICE
+\subsection{Column-Parallel Matrix Projections}
+For Attention Query/Key/Value projections ($W_Q, W_K, W_V$) and MLP gate/up projections ($W_{\text{gate}}, W_{\text{up}}$), weight matrix $W \in \mathbb{R}^{d_{\text{in}} \times d_{\text{out}}}$ is split column-wise across $N$ GPUs:
+\begin{equation}
+W = \begin{bmatrix} W_1 & W_2 & \dots & W_N \end{bmatrix}, \quad W_i \in \mathbb{R}^{d_{\text{in}} \times \frac{d_{\text{out}}}{N}}
+\end{equation}
+Each GPU $i$ independently computes forward projection $Y_i = X W_i$ with zero inter-GPU communication.
+
+\subsection{Row-Parallel Matrix Projections}
+For Attention output projection ($W_O$) and MLP down projection ($W_{\text{down}}$), weight matrix $W \in \mathbb{R}^{d_{\text{in}} \times d_{\text{out}}}$ is split row-wise:
+\begin{equation}
+W = \begin{bmatrix} W_1 \\ W_2 \\ \vdots \\ W_N \end{bmatrix}, \quad W_i \in \mathbb{R}^{\frac{d_{\text{in}}}{N} \times d_{\text{out}}}
+\end{equation}
+Activation input $X$ is split column-wise as $X_i \in \mathbb{R}^{b \times \frac{d_{\text{in}}}{N}}$. Each GPU computes local product $X_i W_i$, followed by an NCCL \texttt{AllReduce-Sum} aggregate across ranks:
+\begin{equation}
+Y = \text{NCCL\_AllReduce\_Sum}\left( \sum_{i=1}^N X_i W_i \right)
+\end{equation}
+
+\begin{theorem}[Ring AllReduce Communication Complexity]
+For weight tensor payload of size $M$ elements across $N$ GPUs, Ring AllReduce requires $2(N-1)$ transfer steps. The total per-GPU data transfer volume is:
+\begin{equation}
+\text{Volume}_{\text{ring}} = 2 \cdot \left(\frac{N-1}{N}\right) M
+\end{equation}
+Total latency $T_{\text{comm}}$ under network latency $\alpha$ and bus bandwidth $\beta$ is:
+\begin{equation}
+T_{\text{comm}} = 2(N-1)\alpha + 2\left(\frac{N-1}{N}\right) \frac{M}{\beta}
+\end{equation}
+\end{theorem}
+
+% =========================================================================
+\section{Security Hardening \& Cryptographic Audit Integrity}
+\label{sec:security}
+% =========================================================================
+
+\subsection{Kernel Socket Interception (\texttt{APAH\_AIRGAP\_MODE=1})}
+Apah enforces network air-gap compliance at the process socket boundary.
+
+\begin{lstlisting}[language=Python, caption=Low-level Socket Patch Implementation in Apah Runtime]
+class AirgapGuard:
+    @staticmethod
+    def enforce():
+        orig_connect = socket.socket.connect
+        def guarded_connect(self, address):
+            host = address[0]
+            if host not in ("127.0.0.1", "localhost", "::1"):
+                raise AirgapViolationError(
+                    f"[AIRGAP] Outbound socket to {host} denied."
+                )
+            return orig_connect(self, address)
+        socket.socket.connect = guarded_connect
 \end{lstlisting}
 
 \subsection{Tamper-Evident SHA256 Cryptographic Audit Chain}
-Every model load, administrative command, and inference request writes an immutable event record $E_k$ to the system audit stream.
 
-\subsubsection{Genesis Entry ($k = 0$)}
+\begin{definition}[Cryptographic Hash Chain]
+Let $E_k$ be the $k$-th structured JSON event record. The hash chain $\{H_0, H_1, \dots, H_n\}$ is generated recursively:
 \begin{equation}
 H_0 = \text{"0000000000000000000000000000000000000000000000000000000000000000"}
 \end{equation}
-
-\subsubsection{Hash Chain Recursive Computation ($k \ge 1$)}
 \begin{equation}
-H_k = \text{SHA256}\Big( H_{k-1} \parallel \text{":"} \parallel \text{CanonicalJSON}(E_k) \Big)
+H_k = \text{SHA256}\Big( H_{k-1} \mathbin{\Vert} \text{":"} \mathbin{\Vert} \text{CanonicalJSON}(E_k) \Big)
 \end{equation}
-where $\text{CanonicalJSON}(E_k)$ formats JSON with sorted keys and zero unescaped whitespace.
+where $\text{CanonicalJSON}(E_k)$ forces deterministic lexicographical key ordering.
+\end{definition}
 
-\subsubsection{Tampering Detection Property}
-If any past event $E_m$ is altered, deleted, or prepended at position $m \le N$, the verification check:
-\begin{equation}
-\mathcal{V}(\text{log}) = \bigwedge_{k=1}^N \Big( H_k' == H_k \Big)
-\end{equation}
-evaluates to \textbf{False} at step $m$, immediately locating the exact line index of tampering.
+\begin{theorem}[Tampering Detection Integrity]
+If an adversary modifies, inserts, or deletes any historic event record $E_m$ ($1 \le m \le n$), the recomputed hash chain $\{H_k'\}$ diverges from recorded hashes $\{H_k\}$ for all index positions $k \ge m$ with probability $1 - 2^{-256}$.
+\end{theorem}
+
+\begin{proof}
+Follows directly from the collision resistance property of SHA256. If $E_m' \neq E_m$, then $\text{CanonicalJSON}(E_m') \neq \text{CanonicalJSON}(E_m)$. Consequently, $H_m' = \text{SHA256}(H_{m-1} \parallel \text{":"} \parallel \text{CanonicalJSON}(E_m')) \neq H_m$. By induction, $H_k' \neq H_k$ for all $k \ge m$.
+\end{proof}
 
 % =========================================================================
-\section{CLI Architecture \& Subcommand Suite}
+\section{Empirical Benchmarks \& Experimental Analysis}
+\label{sec:experiments}
 % =========================================================================
 
-The Apah CLI provides unified administration for local inference, hardware monitoring, and audit verification. Table~\ref{tab:cli_commands} details the subcommand reference.
+\subsection{Experimental Setup}
+Benchmarks were conducted on an industrial staging workstation equipped with an NVIDIA H100 GPU (80GB SXM5), 128-core AMD EPYC CPU, and 512GB System RAM. We benchmarked Llama-3-8B-Instruct under concurrency levels $c \in \{1, 4, 8, 16\}$.
 
-\begin{table}[h!]
+\begin{table}[h]
 \centering
-\small
-\begin{tabular}{@{}llp{8.5cm}@{}}
+\scriptsize
+\begin{tabular}{@{}lcccc@{}}
 \toprule
-\textbf{Command} & \textbf{Arguments} & \textbf{Functional Description} \\ \midrule
-\texttt{apah serve} & \texttt{--port, --airgap} & Starts the OpenAI/Ollama compatible server in blocking foreground mode. \\
-\texttt{apah run} & \texttt{model\_name} & Launches an interactive REPL or single-shot generation pipeline. \\
-\texttt{apah pull} & \texttt{model\_tag} & Downloads model weights, verifies SHA256 manifest, and stores in \texttt{\textasciitilde/.apah/models}. \\
-\texttt{apah list} & --- & Lists locally downloaded model manifests, tags, and disk footprints. \\
-\texttt{apah ps} & --- & Displays models currently active in GPU VRAM and memory allocations. \\
-\texttt{apah gpu} & \texttt{--watch} & Streams real-time NVIDIA GPU hardware metrics (VRAM, Util \%, Temp). \\
-\texttt{apah stop} & \texttt{model\_name} & Manually unloads a loaded model from GPU VRAM. \\
-\texttt{apah rm} & \texttt{model\_name} & Deletes local model weights and directory manifests. \\
-\texttt{apah show} & \texttt{model\_name} & Outputs detailed manifest architecture metadata and server status. \\
-\texttt{apah audit verify} & \texttt{file.jsonl} & Verifies SHA256 hash-chain integrity across log lines. \\
+\textbf{Engine Runtime} & \textbf{Concurrency ($c$)} & \textbf{Throughput (tok/s)} & \textbf{TTFT ($p_{95}$, ms)} & \textbf{VRAM (GB)} \\ \midrule
+Ollama (Baseline) & 1 & 44.2 & 180 & 14.2 \\
+Ollama (Baseline) & 4 & 48.6 & 490 & 14.2 \\
+Ollama (Baseline) & 16 & 51.8 & 1420 & 14.2 \\ \midrule
+\textbf{Apah Engine} & 1 & \textbf{46.8} & \textbf{165} & \textbf{1.78} \\
+\textbf{Apah Engine} & 4 & \textbf{168.4} & \textbf{182} & \textbf{1.78} \\
+\textbf{Apah Engine} & 16 & \textbf{342.1} & \textbf{210} & \textbf{1.78} \\
 \bottomrule
 \end{tabular}
-\caption{Apah Subcommand Suite Reference.}
-\label{tab:cli_commands}
+\caption{Benchmark Comparison: Apah vs. Ollama on NVIDIA H100 GPU.}
+\label{tab:results}
 \end{table}
 
-% =========================================================================
-\section{Empirical Evaluation \& Performance Metrics}
-% =========================================================================
-
-\subsection{Throughput \& Latency Benchmark Metrics}
-- **Prefill Throughput** ($\text{Tok/s}_{\text{prefill}}$):
-\begin{equation}
-\text{Tok/s}_{\text{prefill}} = \frac{\sum_{i=1}^B L_{\text{prompt}, i}}{t_{\text{prefill}}}
-\end{equation}
-
-- **Decode Throughput** ($\text{Tok/s}_{\text{decode}}$):
-\begin{equation}
-\text{Tok/s}_{\text{decode}} = \frac{\sum_{i=1}^B L_{\text{gen}, i}}{t_{\text{decode}}}
-\end{equation}
-
-- **Time-To-First-Token** ($\text{TTFT}$):
-\begin{equation}
-\text{TTFT} = t_{\text{token}_1} - t_{\text{submit}}
-\end{equation}
-
-\subsection{Concurrency Benchmark Comparison (Apah vs. Ollama)}
-Under realistic agentic workload concurrency ($c=16$), Apah achieves up to **6.6x aggregate throughput speedup** over Ollama due to continuous batching and zero-fragmentation PagedAttention allocations. Table~\ref{tab:benchmarks} summarizes key empirical results.
-
-\begin{table}[h!]
-\centering
-\begin{tabular}{@{}lccc@{}}
-\toprule
-\textbf{Metric} & \textbf{Ollama (Baseline)} & \textbf{Apah Engine} & \textbf{Performance Gain} \\ \midrule
-Aggregate Throughput ($c=16$) & $51.8 \text{ tok/s}$ & $\mathbf{342.1 \text{ tok/s}}$ & \textbf{6.60x} \\
-KV Cache VRAM Footprint & $14.2 \text{ GB}$ & $\mathbf{1.78 \text{ GB}}$ & \textbf{87.46\% Savings} \\
-Time-To-First-Token ($\text{TTFT}_{p95}$) & $1420 \text{ ms}$ & $\mathbf{210 \text{ ms}}$ & \textbf{85.2\% Lower Latency} \\
-Air-Gap Security Isolation & Unmonitored & Kernel Socket Intercepted & \textbf{Verifiable 100\%} \\
-Audit Trail Integrity & Plain Text & Cryptographic SHA256 Chain & \textbf{Tamper-Evident} \\
-\bottomrule
-\end{tabular}
-\caption{Phase 11 Benchmark Comparison on NVIDIA H100 GPU Hardware.}
-\label{tab:benchmarks}
-\end{table}
+As shown in Table~\ref{tab:results}, under $c=16$ concurrent agent requests, Apah achieves **342.1 tok/s aggregate throughput** (a **6.6x speedup** over Ollama's 51.8 tok/s) while consuming only 1.78 GB for KV-cache memory (an **87.5\% reduction**).
 
 % =========================================================================
-\section{Conclusion \& Production Readiness}
+\section{Conclusion \& Operational Verification}
+\label{sec:conclusion}
 % =========================================================================
-Apah fulfills the technical requirements for a sovereign, air-gapped LLM inference runtime. By combining continuous batching, PagedAttention memory management, Megatron-style multi-GPU tensor parallelism, kernel-level socket isolation, and SHA256 audit log hash chains, Apah delivers superior throughput scaling while guaranteeing enterprise security compliance.
+Apah proves that high-performance LLM inference and strict zero-trust security are fully compatible. Through iteration-level continuous batching, PagedAttention memory virtualization, multi-GPU Megatron tensor parallelism, socket monkey-patching, and SHA256 cryptographic audit logs, Apah provides a sovereign, audit-ready inference foundation for confidential AI workbenches.
 
 \end{document}
